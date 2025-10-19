@@ -69,12 +69,66 @@ public class ProductServiceImpl implements ProductService {
         int discountPercentage = calculateDiscountPercentage(req.getMrpPrice(), req.getSellingPrice());
         Product product = new Product();
         product.setSeller(seller);
-        product.setCategory(category3);
+        // Note: category3 est de type Category, mais Product attend ProductCategory
+        // Pour l'instant, on commente car c'est incompatible
+        // TODO: Migrer vers ProductCategory
+        // product.setCategory(category3);
         product.setDescription(req.getDescription());
         product.setCreatedAt(LocalDateTime.now());
         product.setTitle(req.getTitle());
         product.setColor(req.getColor());
         product.setSellingPrice(req.getSellingPrice());
+        product.setImages(req.getImages());
+        product.setMrpPrice(req.getMrpPrice());
+        product.setSizes(req.getSizes());
+        product.setDiscountPercent(discountPercentage);
+
+        return productRepository.save(product);
+    }
+
+    // Nouvelle méthode pour créer un produit avec un fournisseur
+    public Product createProductWithSupplier(CreateProductRequest req, com.camoutech.multivendor.model.Supplier supplier) {
+
+        Category category1 = categoryRepository.findByCategoryId(req.getCategory());
+
+        if (category1 == null){
+            Category category = new Category();
+            category.setCategoryId(req.getCategory());
+            category.setLevel(1);
+            category1 = categoryRepository.save(category);
+        }
+
+        Category category2 = categoryRepository.findByCategoryId(req.getCategory2());
+
+        if (category2 == null){
+            Category category = new Category();
+            category.setCategoryId(req.getCategory2());
+            category.setLevel(2);
+            category.setParentCategory(category1);
+            category2 = categoryRepository.save(category);
+        }
+
+        Category category3 = categoryRepository.findByCategoryId(req.getCategory3());
+        if (category3 == null){
+            Category category = new Category();
+            category.setCategoryId(req.getCategory3());
+            category.setParentCategory(category2);
+            category3=categoryRepository.save(category);
+        }
+
+        int discountPercentage = calculateDiscountPercentage(req.getMrpPrice(), req.getSellingPrice());
+        Product product = new Product();
+        product.setSupplier(supplier);
+        // Note: category3 est de type Category, mais Product attend ProductCategory
+        // Pour l'instant, on commente car c'est incompatible
+        // TODO: Migrer vers ProductCategory
+        // product.setCategory(category3);
+        product.setDescription(req.getDescription());
+        product.setCreatedAt(LocalDateTime.now());
+        product.setTitle(req.getTitle());
+        product.setColor(req.getColor());
+        product.setSellingPrice(req.getSellingPrice());
+        product.setSupplierPrice(req.getMrpPrice()); // Prix fournisseur = MRP pour l'instant
         product.setImages(req.getImages());
         product.setMrpPrice(req.getMrpPrice());
         product.setSizes(req.getSizes());

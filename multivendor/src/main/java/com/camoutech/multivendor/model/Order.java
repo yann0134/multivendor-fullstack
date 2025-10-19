@@ -7,6 +7,7 @@
 
 package com.camoutech.multivendor.model;
 
+import com.camoutech.multivendor.domain.DeliveryStatus;
 import com.camoutech.multivendor.domain.OrderStatus;
 import com.camoutech.multivendor.domain.PaymentStatus;
 import jakarta.persistence.*;
@@ -57,6 +58,15 @@ public class Order {
 
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
+    @ManyToOne
+    @JoinColumn(name = "delivery_person_id")
+    private DeliveryPerson deliveryPerson;
+
+    private DeliveryStatus deliveryStatus = DeliveryStatus.PENDING;
+
     private LocalDateTime orderDate = LocalDateTime.now();
     private LocalDateTime deliverDate = orderDate.plusDays(7);
+    private LocalDateTime deliveryDate;
+
+    private String deliveryNotes;
 }

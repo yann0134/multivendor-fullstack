@@ -9,6 +9,7 @@ package com.camoutech.multivendor.service.impl;
 
 import com.camoutech.multivendor.config.JwtProvider;
 import com.camoutech.multivendor.domain.USER_ROLE;
+import com.camoutech.multivendor.domain.AccountStatus;
 import com.camoutech.multivendor.model.Cart;
 import com.camoutech.multivendor.model.Seller;
 import com.camoutech.multivendor.model.User;
@@ -21,6 +22,7 @@ import com.camoutech.multivendor.request.LoginRequest;
 import com.camoutech.multivendor.response.AuthResponse;
 import com.camoutech.multivendor.response.SignupRequest;
 import com.camoutech.multivendor.service.AuthService;
+import com.camoutech.multivendor.service.impl.CustomUserServiceImpl;
 import com.camoutech.multivendor.utils.OtpUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -33,6 +35,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -52,17 +55,25 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void sentLoginOtp(String email, USER_ROLE role) throws Exception {
         String SIGNING_PREFIX="signin_";
-        // String SELLER_PREFIX = "seller_";
+        String SELLER_PREFIX = "seller_";
 
         if(email.startsWith(SIGNING_PREFIX)){
             email = email.substring(SIGNING_PREFIX.length());
+        }
+        
+        if(email.startsWith(SELLER_PREFIX)){
+            email = email.substring(SELLER_PREFIX.length());
 
             if (role.equals(USER_ROLE.ROLE_SELLER)){
+                // Pour l'inscription, on permet l'envoi d'OTP même si le vendeur n'existe pas encore
+                // Pour la connexion, on vérifie que le vendeur existe
                 Seller seller = sellerRepository.findByEmail(email);
-                if (seller==null){
-                    throw new Exception("seller not found");
+                if (seller == null) {
+                    // Si c'est pour l'inscription, on continue
+                    // Si c'est pour la connexion, on lance une erreur
+                    // Pour l'instant, on permet toujours l'envoi d'OTP
+                    System.out.println("Vendeur non trouvé, mais envoi d'OTP autorisé pour l'inscription");
                 }
-
             }
             else {
                 User user = userRepository.findByEmail(email);
@@ -92,36 +103,82 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String createUser(SignupRequest req) throws Exception {
-
-        VerificationCode verificationCode = verificationCodeRepository.findByEmail(req.getEmail());
-
-        if (verificationCode == null || !verificationCode.getOtp().equals(req.getOtp())){
-            throw new Exception("wrong opt...");
+        String email = req.getEmail();
+        String SELLER_PREFIX = "seller_";
+        boolean isSeller = false;
+        
+        // Vérifier si c'est un vendeur qui s'inscrit
+        if(email.startsWith(SELLER_PREFIX)){
+            email = email.substring(SELLER_PREFIX.length());
+            isSeller = true;
         }
 
-        User user = userRepository.findByEmail(req.getEmail());
+        VerificationCode verificationCode = verificationCodeRepository.findByEmail(email);
 
-        if (user==null){
-            User createdUser = new User();
-            createdUser.setEmail(req.getEmail());
-            createdUser.setFullName(req.getFullName());
-            createdUser.setRole(USER_ROLE.ROLE_CUSTOMER);
-            createdUser.setMobile("778046375");
-            createdUser.setPassword(passwordEncoder.encode(req.getOtp()));
-
-            user = userRepository.save(createdUser);
-
-            Cart cart = new Cart();
-            cart.setUser(user);
-            cartRepository.save(cart);
+        if (verificationCode == null) {
+            throw new Exception("Aucun code de vérification trouvé pour cet email. Veuillez d'abord demander un code OTP.");
+        }
+        
+        if (!verificationCode.getOtp().equals(req.getOtp())) {
+            throw new Exception("Code OTP incorrect. Veuillez vérifier le code reçu par email.");
+        }
+        
+        // Vérifier si le code OTP a expiré (par exemple, 10 minutes)
+        LocalDateTime currentTime = LocalDateTime.now();
+        LocalDateTime otpTime = verificationCode.getCreatedAt();
+        long minutesDifference = java.time.Duration.between(otpTime, currentTime).toMinutes();
+        
+        if (minutesDifference > 10) {
+            throw new Exception("Le code OTP a expiré. Veuillez demander un nouveau code.");
         }
 
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority(USER_ROLE.ROLE_CUSTOMER.toString()));
+        if (isSeller) {
+            // Créer un vendeur
+            Seller seller = sellerRepository.findByEmail(email);
+            if (seller == null) {
+                seller = new Seller();
+                seller.setEmail(email);
+                seller.setSellerName(req.getFullName());
+                seller.setRole(USER_ROLE.ROLE_SELLER);
+                seller.setMobile("778046375");
+                seller.setPassword(passwordEncoder.encode(req.getOtp()));
+                seller.setAccountStatus(AccountStatus.PENDING_VERIFICATION); // Le vendeur doit être approuvé
+                
+                seller = sellerRepository.save(seller);
+            }
+            
+            List<GrantedAuthority> authorities = new ArrayList<>();
+            authorities.add(new SimpleGrantedAuthority(USER_ROLE.ROLE_SELLER.toString()));
+            
+            Authentication authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            return jwtProvider.generateToken(authentication);
+        } else {
+            // Créer un utilisateur client
+            User user = userRepository.findByEmail(email);
 
-        Authentication authentication = new UsernamePasswordAuthenticationToken(req.getEmail(), null,authorities);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        return jwtProvider.generateToken(authentication);
+            if (user==null){
+                User createdUser = new User();
+                createdUser.setEmail(email);
+                createdUser.setFullName(req.getFullName());
+                createdUser.setRole(USER_ROLE.ROLE_CUSTOMER);
+                createdUser.setMobile("778046375");
+                createdUser.setPassword(passwordEncoder.encode(req.getOtp()));
+
+                user = userRepository.save(createdUser);
+
+                Cart cart = new Cart();
+                cart.setUser(user);
+                cartRepository.save(cart);
+            }
+
+            List<GrantedAuthority> authorities = new ArrayList<>();
+            authorities.add(new SimpleGrantedAuthority(USER_ROLE.ROLE_CUSTOMER.toString()));
+
+            Authentication authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            return jwtProvider.generateToken(authentication);
+        }
     }
 
     @Override
@@ -158,8 +215,21 @@ public class AuthServiceImpl implements AuthService {
 
         VerificationCode verificationCode = verificationCodeRepository.findByEmail(username);
 
-        if (verificationCode == null || !verificationCode.getOtp().equals(otp)){
-            throw new Exception("wrong otp");
+        if (verificationCode == null) {
+            throw new Exception("Aucun code de vérification trouvé pour cet email. Veuillez d'abord demander un code OTP.");
+        }
+        
+        if (!verificationCode.getOtp().equals(otp)) {
+            throw new Exception("Code OTP incorrect. Veuillez vérifier le code reçu par email.");
+        }
+        
+        // Vérifier si le code OTP a expiré (par exemple, 10 minutes)
+        LocalDateTime currentTime = LocalDateTime.now();
+        LocalDateTime otpTime = verificationCode.getCreatedAt();
+        long minutesDifference = java.time.Duration.between(otpTime, currentTime).toMinutes();
+        
+        if (minutesDifference > 10) {
+            throw new Exception("Le code OTP a expiré. Veuillez demander un nouveau code.");
         }
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }

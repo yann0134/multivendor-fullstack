@@ -1,6 +1,9 @@
 package com.camoutech.multivendor.repository;
 
 import com.camoutech.multivendor.model.Product;
+import com.camoutech.multivendor.model.ProductCategory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -16,4 +19,27 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             "(:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR (:query IS NULL OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :query, '%'))))")
     List<Product> searchProduct(@Param("query") String query);
+
+    // Nouvelles méthodes pour les produits agricoles
+    Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
+    
+    Page<Product> findBySubCategoryId(Long subCategoryId, Pageable pageable);
+    
+    Page<Product> findByCategoryType(ProductCategory.CategoryType type, Pageable pageable);
+    
+    Page<Product> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+    
+    Page<Product> findByIsOrganicTrue(Pageable pageable);
+    
+    Page<Product> findByIsLocalTrue(Pageable pageable);
+    
+    List<Product> findTop8ByOrderByNumRatingsDesc();
+    
+    List<Product> findTop8ByOrderByCreatedAtDesc();
+    
+    @Query("SELECT p FROM Product p WHERE p.quantity > 0 AND (p.expiryDate IS NULL OR p.expiryDate > CURRENT_TIMESTAMP)")
+    Page<Product> findAvailableProducts(Pageable pageable);
+    
+    @Query("SELECT p FROM Product p WHERE p.category.type = :type AND p.quantity > 0 AND (p.expiryDate IS NULL OR p.expiryDate > CURRENT_TIMESTAMP)")
+    Page<Product> findAvailableProductsByType(@Param("type") ProductCategory.CategoryType type, Pageable pageable);
 }
