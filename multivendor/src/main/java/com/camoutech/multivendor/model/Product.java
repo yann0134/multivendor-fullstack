@@ -10,14 +10,14 @@ package com.camoutech.multivendor.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Getter
-@Setter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class Product {
@@ -33,15 +33,15 @@ public class Product {
     private int mrpPrice; // Prix de marché recommandé
 
     private int sellingPrice; // Prix de vente
+    
+    @Column(name = "price")
+    private int price = 0; // Prix général (peut être utilisé comme prix de base)
 
     private int discountPercent;
 
     private int quantity; // Quantité disponible
 
     private String color; // Couleur du produit
-
-    @ElementCollection
-    private List<String> images = new ArrayList<>();
 
     private int numRatings; // Nombre d'évaluations
 
@@ -61,26 +61,43 @@ public class Product {
     private LocalDateTime harvestDate; // Date de récolte
     
     private LocalDateTime expiryDate; // Date d'expiration
+
+    @Column(name = "is_organic")
+    private boolean organic = false; // Produit bio
+
+    @Column(name = "is_local")
+    private boolean local = false; // Produit local
     
-    private boolean isOrganic = false; // Produit bio
+    @Column(name = "is_fresh")
+    private boolean fresh = true; // Produit frais
     
-    private boolean isLocal = false; // Produit local
+    @Column(name = "fresh")
+    @JsonIgnore
+    private Boolean freshField = true; // Champ fresh supplémentaire
     
     private String nutritionalInfo; // Informations nutritionnelles
     
     private String allergens; // Allergènes présents
 
+    // Images du produit
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ProductImage> images = new ArrayList<>();
+
     // Relations
     @ManyToOne
+    @JsonIgnore
     private ProductCategory category; // Catégorie principale
 
     @ManyToOne
+    @JsonIgnore
     private ProductSubCategory subCategory; // Sous-catégorie
 
     @ManyToOne
+    @JsonIgnore
     private Seller seller; // Vendeur (fermier)
 
     @ManyToOne
+    @JsonIgnore
     private Supplier supplier; // Fournisseur (fermier)
 
     private double supplierPrice; // Prix d'achat au fournisseur
@@ -88,10 +105,23 @@ public class Product {
     private int warehouseQuantity; // Stock en entrepôt
 
     private int reservedQuantity; // Stock réservé
+    
+    @Column(name = "stock_quantity")
+    private int stockQuantity = 0; // Quantité en stock
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
     private String sizes; // Tailles disponibles
+
+    // Statut de validation du produit
+    @Enumerated(EnumType.STRING)
+    private ProductStatus status = ProductStatus.PENDING_APPROVAL; // Statut par défaut
+
+    private String rejectionReason; // Raison du rejet si applicable
+
+    private LocalDateTime statusUpdatedAt; // Date de dernière mise à jour du statut
+
+    private String reviewedBy; // Email de l'administrateur qui a validé/rejeté
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
@@ -105,7 +135,50 @@ public class Product {
         return expiryDate == null || expiryDate.isAfter(LocalDateTime.now());
     }
     
+    @JsonIgnore
     public String getFormattedPrice() {
         return String.format("%.2f FCFA", sellingPrice);
+    }
+    
+    // Méthodes pour les images
+    public ProductImage getMainImage() {
+        return images.stream()
+                .filter(ProductImage::isMain)
+                .findFirst()
+                .orElse(images.isEmpty() ? null : images.get(0));
+    }
+    
+    public List<ProductImage> getActiveImages() {
+        return images.stream()
+                .filter(ProductImage::getIsActive)
+                .sorted((a, b) -> a.getDisplayOrder().compareTo(b.getDisplayOrder()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+    
+    public boolean hasImages() {
+        return !images.isEmpty();
+    }
+    
+    public int getImageCount() {
+        return images.size();
+    }
+
+    // Enum pour les statuts de produit
+    public enum ProductStatus {
+        PENDING_APPROVAL("En attente d'approbation"),
+        APPROVED("Approuvé"),
+        REJECTED("Rejeté"),
+        SUSPENDED("Suspendu"),
+        DRAFT("Brouillon");
+
+        private final String description;
+
+        ProductStatus(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
     }
 }

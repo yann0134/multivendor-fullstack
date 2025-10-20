@@ -78,7 +78,8 @@ public class ProductServiceImpl implements ProductService {
         product.setTitle(req.getTitle());
         product.setColor(req.getColor());
         product.setSellingPrice(req.getSellingPrice());
-        product.setImages(req.getImages());
+        // Note: Les images sont maintenant gérées séparément via ProductImageService
+        // product.setImages(req.getImages()); // Supprimé car images est maintenant List<ProductImage>
         product.setMrpPrice(req.getMrpPrice());
         product.setSizes(req.getSizes());
         product.setDiscountPercent(discountPercentage);
@@ -129,10 +130,28 @@ public class ProductServiceImpl implements ProductService {
         product.setColor(req.getColor());
         product.setSellingPrice(req.getSellingPrice());
         product.setSupplierPrice(req.getMrpPrice()); // Prix fournisseur = MRP pour l'instant
-        product.setImages(req.getImages());
+        // Note: Les images sont maintenant gérées séparément via ProductImageService
+        // product.setImages(req.getImages()); // Supprimé car images est maintenant List<ProductImage>
         product.setMrpPrice(req.getMrpPrice());
         product.setSizes(req.getSizes());
         product.setDiscountPercent(discountPercentage);
+        product.setFresh(true); // Par défaut, les produits sont frais
+        product.setFreshField(true); // Champ fresh supplémentaire
+        product.setPrice(req.getSellingPrice()); // Utiliser le prix de vente comme prix général
+        product.setStockQuantity(0); // Stock initial par défaut
+        
+        // Informations agricoles
+        product.setOrigin(req.getOrigin());
+        product.setFarmingMethod(req.getFarmingMethod());
+        product.setSeason(req.getSeason());
+        product.setUnit(req.getUnit());
+        product.setWeight(req.getWeight() != null ? req.getWeight() : 0.0);
+        product.setStorageConditions(req.getStorageConditions());
+        product.setNutritionalInfo(req.getNutritionalInfo());
+        product.setAllergens(req.getAllergens());
+        product.setOrganic(req.getOrganic() != null ? req.getOrganic() : false);
+        product.setLocal(req.getLocal() != null ? req.getLocal() : false);
+        product.setFresh(req.getFresh() != null ? req.getFresh() : true);
 
         return productRepository.save(product);
     }

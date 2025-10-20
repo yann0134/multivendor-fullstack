@@ -5,8 +5,22 @@ export const authService = {
   // Envoyer un OTP pour connexion/inscription
   async sendOtp(email, role = 'ROLE_CUSTOMER') {
     try {
+      // Ajouter le préfixe approprié selon le rôle
+      let prefixedEmail = email
+      if (role === 'ROLE_SELLER') {
+        prefixedEmail = `seller_${email}`
+      } else if (role === 'ROLE_SUPPLIER') {
+        prefixedEmail = `supplier_${email}`
+      } else if (role === 'ROLE_DELIVERY') {
+        prefixedEmail = `delivery_${email}`
+      } else if (role === 'ROLE_WAREHOUSE') {
+        prefixedEmail = `warehouse_${email}`
+      } else if (role === 'ROLE_ADMIN') {
+        prefixedEmail = `admin_${email}`
+      }
+      
       const response = await api.post('/auth/sent/login-signup-otp', {
-        email: role === 'ROLE_SELLER' ? `seller_${email}` : email,
+        email: prefixedEmail,
         role: role
       })
       return response.data
@@ -19,8 +33,22 @@ export const authService = {
   // Inscription avec OTP
   async signup(userData) {
     try {
+      // Ajouter le préfixe approprié selon le rôle
+      let prefixedEmail = userData.email
+      if (userData.role === 'ROLE_SELLER') {
+        prefixedEmail = `seller_${userData.email}`
+      } else if (userData.role === 'ROLE_SUPPLIER') {
+        prefixedEmail = `supplier_${userData.email}`
+      } else if (userData.role === 'ROLE_DELIVERY') {
+        prefixedEmail = `delivery_${userData.email}`
+      } else if (userData.role === 'ROLE_WAREHOUSE') {
+        prefixedEmail = `warehouse_${userData.email}`
+      } else if (userData.role === 'ROLE_ADMIN') {
+        prefixedEmail = `admin_${userData.email}`
+      }
+      
       const response = await api.post('/auth/signup', {
-        email: userData.email,
+        email: prefixedEmail,
         fullName: userData.fullName,
         otp: userData.otp
       })
@@ -34,8 +62,22 @@ export const authService = {
   // Connexion avec OTP
   async login(loginData) {
     try {
+      // Ajouter le préfixe approprié selon le rôle
+      let prefixedEmail = loginData.email
+      if (loginData.role === 'ROLE_SELLER') {
+        prefixedEmail = `seller_${loginData.email}`
+      } else if (loginData.role === 'ROLE_SUPPLIER') {
+        prefixedEmail = `supplier_${loginData.email}`
+      } else if (loginData.role === 'ROLE_DELIVERY') {
+        prefixedEmail = `delivery_${loginData.email}`
+      } else if (loginData.role === 'ROLE_WAREHOUSE') {
+        prefixedEmail = `warehouse_${loginData.email}`
+      } else if (loginData.role === 'ROLE_ADMIN') {
+        prefixedEmail = `admin_${loginData.email}`
+      }
+      
       const response = await api.post('/auth/signing', {
-        email: loginData.role === 'ROLE_SELLER' ? `seller_${loginData.email}` : loginData.email,
+        email: prefixedEmail,
         otp: loginData.otp
       })
       return response.data

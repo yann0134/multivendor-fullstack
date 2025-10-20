@@ -3,9 +3,10 @@
     <!-- Navigation latérale -->
     <v-navigation-drawer
       v-model="drawer"
-      temporary
+      :temporary="!drawer"
       location="left"
       width="280"
+      class="agri-slide-in agri-drawer-scroll"
     >
       <div class="pa-4">
         <div class="d-flex align-center mb-4">
@@ -109,7 +110,7 @@
     </v-navigation-drawer>
 
     <!-- Barre d'application -->
-    <v-app-bar color="primary" dark elevation="2">
+    <v-app-bar color="primary" dark elevation="2" class="agri-fade-in">
       <v-app-bar-nav-icon @click="drawer = !drawer" />
       
       <v-toolbar-title class="d-flex align-center">

@@ -23,4 +23,17 @@ public class CreateProductRequest {
     private String category2;
     private String category3;
     private String sizes;
+    
+    // Informations agricoles
+    private String origin;
+    private String farmingMethod;
+    private String season;
+    private String unit;
+    private Double weight;
+    private String storageConditions;
+    private String nutritionalInfo;
+    private String allergens;
+    private Boolean organic;
+    private Boolean local;
+    private Boolean fresh;
 }

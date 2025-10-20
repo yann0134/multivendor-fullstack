@@ -40,11 +40,16 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (loginData) => {
     loading.value = true
     try {
+      console.log('🔍 Login - Données envoyées:', loginData)
       const response = await authService.login(loginData)
+      console.log('🔍 Login - Réponse reçue:', response)
       const { jwt, role } = response
       
       token.value = jwt
+      user.value = { email: otpEmail.value, role }
       authService.saveAuthData(jwt, { email: otpEmail.value, role })
+      
+      console.log('🔍 Login - Utilisateur stocké:', user.value)
       
       // Réinitialiser l'état OTP
       otpSent.value = false
@@ -62,11 +67,16 @@ export const useAuthStore = defineStore('auth', () => {
   const signup = async (userData) => {
     loading.value = true
     try {
+      console.log('🔍 Signup - Données envoyées:', userData)
       const response = await authService.signup(userData)
+      console.log('🔍 Signup - Réponse reçue:', response)
       const { jwt, role } = response
       
       token.value = jwt
+      user.value = { email: userData.email, role }
       authService.saveAuthData(jwt, { email: userData.email, role })
+      
+      console.log('🔍 Signup - Utilisateur stocké:', user.value)
       
       // Réinitialiser l'état OTP
       otpSent.value = false
@@ -90,6 +100,23 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Initialiser l'utilisateur depuis le localStorage
+  const initializeUser = () => {
+    // Recharger le token et l'utilisateur depuis le localStorage au rafraîchissement
+    const storedToken = localStorage.getItem('jwt_token')
+    if (storedToken) {
+      token.value = storedToken
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        try {
+          user.value = JSON.parse(userData)
+        } catch (error) {
+          console.error('Erreur lors du parsing des données utilisateur:', error)
+        }
+      }
+    }
+  }
+
   // Déconnexion
   const logout = () => {
     user.value = null
@@ -107,6 +134,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Redirection basée sur le rôle
   const getDashboardRoute = (userRole) => {
+    console.log('🎯 getDashboardRoute appelé avec:', userRole)
+    console.log('🎯 USER_ROLES disponibles:', USER_ROLES)
+    
     const routes = {
       [USER_ROLES.CUSTOMER]: '/customer',
       [USER_ROLES.SELLER]: '/seller',
@@ -115,7 +145,10 @@ export const useAuthStore = defineStore('auth', () => {
       [USER_ROLES.WAREHOUSE]: '/warehouse',
       [USER_ROLES.ADMIN]: '/admin'
     }
-    return routes[userRole] || '/'
+    
+    const route = routes[userRole] || '/'
+    console.log('🎯 Route sélectionnée:', route)
+    return route
   }
 
   // Vérifier les permissions
@@ -140,6 +173,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     sendOtp,
     fetchUserProfile,
+    initializeUser,
     resetOtpState,
     getDashboardRoute,
     hasRole,

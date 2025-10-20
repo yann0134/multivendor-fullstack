@@ -2,10 +2,10 @@
   <v-container v-if="product">
     <v-row>
       <v-col cols="12" md="6">
-        <v-img
-          :src="product.images?.[0] || '/placeholder.jpg'"
-          height="400"
-          cover
+        <!-- Galerie d'images du produit -->
+        <ProductImageGallery
+          :images="productImages"
+          :product-name="product.title"
         />
       </v-col>
       
@@ -152,10 +152,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
+import ProductImageGallery from '@/components/customer/ProductImageGallery.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -171,6 +172,22 @@ const reviews = ref([])
 
 const colors = ref(['Rouge', 'Bleu', 'Vert', 'Noir', 'Blanc'])
 const sizes = ref(['S', 'M', 'L', 'XL'])
+
+// Images du produit pour la galerie
+const productImages = computed(() => {
+  if (!product.value?.images) return []
+  
+  return product.value.images.map((image, index) => ({
+    id: image.id || index,
+    url: image.imageUrl || image.url || image,
+    thumbnailUrl: image.thumbnailUrl || image.imageUrl || image.url || image,
+    altText: image.altText || `${product.value.title} - Image ${index + 1}`,
+    description: image.description || '',
+    width: image.width || 800,
+    height: image.height || 600,
+    isMain: image.isMain || index === 0
+  }))
+})
 
 const addToCart = async () => {
   loading.value = true

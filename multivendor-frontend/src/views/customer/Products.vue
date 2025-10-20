@@ -97,15 +97,15 @@
             <!-- Prix -->
             <div class="mb-4">
               <label class="text-subtitle-2 mb-2 d-block">Prix (FCFA)</label>
-              <v-range-slider
-                v-model="priceRange"
-                :min="0"
+            <v-range-slider
+              v-model="priceRange"
+              :min="0"
                 :max="10000"
                 :step="100"
-                thumb-label
-                @update:model-value="updatePriceFilter"
+              thumb-label
+              @update:model-value="updatePriceFilter"
                 class="mt-2"
-              />
+            />
               <div class="d-flex justify-space-between text-caption text-grey">
                 <span>{{ formatPrice(priceRange[0]) }}</span>
                 <span>{{ formatPrice(priceRange[1]) }}</span>
@@ -158,29 +158,29 @@
 
         <!-- Produits -->
         <div v-else-if="productStore.products.length > 0">
-          <v-row>
-            <v-col
-              v-for="product in productStore.products"
-              :key="product.id"
+        <v-row>
+          <v-col
+            v-for="product in productStore.products"
+            :key="product.id"
               :cols="viewMode === 'list' ? 12 : 12"
               :sm="viewMode === 'list' ? 12 : 6"
               :md="viewMode === 'list' ? 12 : 4"
-            >
-              <ProductCard
-                :product="product"
+          >
+            <ProductCard
+              :product="product"
                 :view-mode="viewMode"
-              />
-            </v-col>
-          </v-row>
-          
-          <!-- Pagination -->
-          <v-pagination
+            />
+          </v-col>
+        </v-row>
+        
+        <!-- Pagination -->
+        <v-pagination
             v-if="totalPages > 1"
-            v-model="currentPage"
+          v-model="currentPage"
             :length="totalPages"
             @update:model-value="loadPage"
-            class="mt-6"
-          />
+          class="mt-6"
+        />
         </div>
 
         <!-- Aucun produit trouvé -->
@@ -342,7 +342,7 @@ const handleSearch = async () => {
   if (searchQuery.value.trim()) {
     try {
       await productStore.searchProducts(searchQuery.value.trim())
-    } catch (error) {
+  } catch (error) {
       console.error('Erreur lors de la recherche:', error)
     }
   } else {

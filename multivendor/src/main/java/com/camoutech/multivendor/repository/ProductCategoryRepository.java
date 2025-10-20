@@ -24,4 +24,6 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
     
     @Query("SELECT c FROM ProductCategory c WHERE c.type = :type AND c.isActive = true ORDER BY c.name")
     List<ProductCategory> findActiveByTypeOrderByName(ProductCategory.CategoryType type);
+    
+    ProductCategory findByNameIgnoreCase(String name);
 }

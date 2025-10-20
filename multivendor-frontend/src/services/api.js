@@ -29,7 +29,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('jwt_token')
-      localStorage.removeItem('user')
+      localStorage.removeItem('user') // aligné avec authStore.initializeUser()
       window.location.href = '/login'
     }
     return Promise.reject(error)

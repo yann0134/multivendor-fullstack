@@ -16,5 +16,7 @@ public interface ProductSubCategoryRepository extends JpaRepository<ProductSubCa
     
     Optional<ProductSubCategory> findByName(String name);
     
+    Optional<ProductSubCategory> findByNameIgnoreCase(String name);
+    
     List<ProductSubCategory> findByParentCategoryId(Long parentCategoryId);
 }

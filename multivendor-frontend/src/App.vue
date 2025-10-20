@@ -19,8 +19,17 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const showAppBar = computed(() => {
-  const hiddenRoutes = ['/login', '/register']
-  return !hiddenRoutes.includes(route.path)
+  const authPages = ['/login', '/register']
+  const rolePrefixes = ['/customer', '/seller', '/supplier', '/delivery', '/warehouse', '/admin']
+
+  // Masquer la barre pour pages auth
+  if (authPages.includes(route.path)) return false
+  // Masquer la barre pour tous les espaces rôle
+  if (rolePrefixes.some(p => route.path.startsWith(p))) return false
+  // Masquer si connecté
+  if (authStore.isAuthenticated.value) return false
+  // Sinon afficher (pages publiques non-auth)
+  return true
 })
 
 const showFooter = computed(() => {

@@ -36,12 +36,16 @@ import SellerProfile from '@/views/seller/Profile.vue'
 // Vues fournisseur
 import SupplierDashboard from '@/views/supplier/Dashboard.vue'
 import SupplierProducts from '@/views/supplier/Products.vue'
+import SupplierAddProduct from '@/views/supplier/AddProduct.vue'
+import SupplierProductList from '@/views/supplier/SupplierProducts.vue'
+import SupplierEditProduct from '@/views/supplier/EditProduct.vue'
 import SupplierOrders from '@/views/supplier/Orders.vue'
 import SupplierProfile from '@/views/supplier/Profile.vue'
 
-// Vues livreur
+// Vues livreur/agent
 import DeliveryDashboard from '@/views/delivery/Dashboard.vue'
-import DeliveryTasks from '@/views/delivery/Tasks.vue'
+import AgentTasks from '@/views/delivery/AgentTasks.vue'
+import DeliveryTasks from '@/views/delivery/DeliveryTasks.vue'
 import DeliveryEarnings from '@/views/delivery/Earnings.vue'
 import DeliveryProfile from '@/views/delivery/Profile.vue'
 
@@ -56,6 +60,8 @@ import AdminDashboard from '@/views/admin/Dashboard.vue'
 import AdminUsers from '@/views/admin/Users.vue'
 import AdminAnalytics from '@/views/admin/Analytics.vue'
 import AdminSettings from '@/views/admin/Settings.vue'
+import AdminCategories from '@/views/admin/Categories.vue'
+import AdminProductValidation from '@/views/admin/ProductValidation.vue'
 
 const routes = [
   // Routes publiques
@@ -182,7 +188,17 @@ const routes = [
       {
         path: 'products',
         name: 'SupplierProducts',
-        component: SupplierProducts
+        component: SupplierProductList
+      },
+      {
+        path: 'products/add',
+        name: 'SupplierAddProduct',
+        component: SupplierAddProduct
+      },
+      {
+        path: 'products/edit/:id',
+        name: 'SupplierEditProduct',
+        component: SupplierEditProduct
       },
       {
         path: 'orders',
@@ -197,7 +213,7 @@ const routes = [
     ]
   },
   
-  // Routes livreur
+  // Routes livreur/agent
   {
     path: '/delivery',
     component: DeliveryLayout,
@@ -209,7 +225,12 @@ const routes = [
         component: DeliveryDashboard
       },
       {
-        path: 'tasks',
+        path: 'agent-tasks',
+        name: 'AgentTasks',
+        component: AgentTasks
+      },
+      {
+        path: 'delivery-tasks',
         name: 'DeliveryTasks',
         component: DeliveryTasks
       },
@@ -280,6 +301,31 @@ const routes = [
         path: 'settings',
         name: 'AdminSettings',
         component: AdminSettings
+      },
+      {
+        path: 'categories',
+        name: 'AdminCategories',
+        component: AdminCategories
+      },
+      {
+        path: 'validation',
+        name: 'AdminProductValidation',
+        component: AdminProductValidation
+      },
+      {
+        path: 'pending',
+        name: 'AdminPendingProducts',
+        component: AdminProductValidation
+      },
+      {
+        path: 'approved',
+        name: 'AdminApprovedProducts',
+        component: AdminProductValidation
+      },
+      {
+        path: 'rejected',
+        name: 'AdminRejectedProducts',
+        component: AdminProductValidation
       }
     ]
   },
@@ -301,6 +347,14 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   
+  // Si l'utilisateur est connecté et essaie d'accéder à la page d'accueil publique
+  if (to.path === '/' && authStore.isAuthenticated) {
+    // Rediriger vers le dashboard approprié selon le rôle
+    const dashboardRoute = authStore.getDashboardRoute(authStore.user?.role)
+    next(dashboardRoute)
+    return
+  }
+  
   // Vérifier si l'authentification est requise
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
@@ -313,6 +367,47 @@ router.beforeEach((to, from, next) => {
     const dashboardRoute = authStore.getDashboardRoute(authStore.user?.role)
     next(dashboardRoute)
     return
+  }
+  
+  // Redirection automatique pour les utilisateurs connectés qui accèdent à une route qui ne correspond pas à leur rôle
+  if (authStore.isAuthenticated && authStore.user?.role) {
+    const userRole = authStore.user.role
+    const currentPath = to.path
+    
+    // Debug: afficher les informations de redirection
+    console.log('🔍 Debug redirection:', {
+      userRole,
+      currentPath,
+      isAuthenticated: authStore.isAuthenticated,
+      user: authStore.user
+    })
+    
+    // Vérifier si l'utilisateur accède à une route qui ne correspond pas à son rôle
+    if (userRole === 'ROLE_SELLER' && currentPath.startsWith('/customer')) {
+      console.log('🔄 Redirection vendeur vers /seller')
+      next('/seller')
+      return
+    } else if (userRole === 'ROLE_CUSTOMER' && currentPath.startsWith('/seller')) {
+      console.log('🔄 Redirection client vers /customer')
+      next('/customer')
+      return
+    } else if (userRole === 'ROLE_SUPPLIER' && (currentPath.startsWith('/customer') || currentPath.startsWith('/seller'))) {
+      console.log('🔄 Redirection fournisseur vers /supplier')
+      next('/supplier')
+      return
+    } else if (userRole === 'ROLE_DELIVERY' && (currentPath.startsWith('/customer') || currentPath.startsWith('/seller') || currentPath.startsWith('/supplier'))) {
+      console.log('🔄 Redirection livreur vers /delivery')
+      next('/delivery')
+      return
+    } else if (userRole === 'ROLE_WAREHOUSE' && (currentPath.startsWith('/customer') || currentPath.startsWith('/seller') || currentPath.startsWith('/supplier') || currentPath.startsWith('/delivery'))) {
+      console.log('🔄 Redirection entrepôt vers /warehouse')
+      next('/warehouse')
+      return
+    } else if (userRole === 'ROLE_ADMIN' && !currentPath.startsWith('/admin')) {
+      console.log('🔄 Redirection admin vers /admin')
+      next('/admin')
+      return
+    }
   }
   
   next()

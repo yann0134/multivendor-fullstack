@@ -1,5 +1,6 @@
 package com.camoutech.multivendor.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -36,10 +37,16 @@ public class ProductCategory {
     
     private LocalDateTime createdAt = LocalDateTime.now();
     
+    // Audit simple pour savoir qui a créé la catégorie (administrateur)
+    private String createdByEmail;
+    private String createdByName;
+    
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore // éviter la récursion infinie lors de la sérialisation
     private List<Product> products = new ArrayList<>();
     
     @OneToMany(mappedBy = "parentCategory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore // éviter la récursion infinie lors de la sérialisation
     private List<ProductSubCategory> subCategories = new ArrayList<>();
     
     public enum CategoryType {
