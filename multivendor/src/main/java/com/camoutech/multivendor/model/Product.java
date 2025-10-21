@@ -85,7 +85,6 @@ public class Product {
 
     // Relations
     @ManyToOne
-    @JsonIgnore
     private ProductCategory category; // Catégorie principale
 
     @ManyToOne

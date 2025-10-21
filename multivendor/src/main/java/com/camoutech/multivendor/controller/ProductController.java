@@ -1,5 +1,6 @@
 package com.camoutech.multivendor.controller;
 
+import com.camoutech.multivendor.exceptions.ProductException;
 import com.camoutech.multivendor.model.Product;
 import com.camoutech.multivendor.model.ProductCategory;
 import com.camoutech.multivendor.model.ProductSubCategory;
@@ -222,9 +223,14 @@ public class ProductController {
             }
         }
 
-        Product created = productService.createProductWithSupplier(req, supplier);
-        System.out.println("✅ Produit créé avec succès: " + created.getId());
-        return new ResponseEntity<>(created, HttpStatus.CREATED);
+        try {
+            Product created = productService.createProductWithSupplier(req, supplier);
+            System.out.println("✅ Produit créé avec succès: " + created.getId());
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (ProductException e) {
+            System.out.println("❌ Erreur lors de la création du produit: " + e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
     /**

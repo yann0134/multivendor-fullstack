@@ -8,11 +8,9 @@
 package com.camoutech.multivendor.service.impl;
 
 import com.camoutech.multivendor.exceptions.ProductException;
-import com.camoutech.multivendor.model.Category;
 import com.camoutech.multivendor.model.Product;
 import com.camoutech.multivendor.model.ProductCategory;
 import com.camoutech.multivendor.model.Seller;
-import com.camoutech.multivendor.repository.CategoryRepository;
 import com.camoutech.multivendor.repository.ProductCategoryRepository;
 import com.camoutech.multivendor.repository.ProductRepository;
 import com.camoutech.multivendor.request.CreateProductRequest;
@@ -36,105 +34,60 @@ import java.util.List;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
-    private final CategoryRepository categoryRepository;
     private final ProductCategoryRepository productCategoryRepository;
 
     @Override
-    public Product createProduct(CreateProductRequest req, Seller seller) {
+    public Product createProduct(CreateProductRequest req, Seller seller) throws ProductException {
 
-        Category category1 = categoryRepository.findByCategoryId(req.getCategory());
-
-        if (category1 == null){
-            Category category = new Category();
-            category.setCategoryId(req.getCategory());
-            category.setLevel(1);
-            category1 = categoryRepository.save(category);
+        // Vérifier que la catégorie existe (OBLIGATOIRE)
+        ProductCategory productCategory = productCategoryRepository.findByNameIgnoreCase(req.getCategory());
+        if (productCategory == null) {
+            System.out.println("❌ Catégorie non trouvée: " + req.getCategory());
+            throw new ProductException("La catégorie '" + req.getCategory() + "' n'existe pas. Veuillez d'abord créer cette catégorie.");
         }
-
-        Category category2 = categoryRepository.findByCategoryId(req.getCategory2());
-
-        if (category2 == null){
-            Category category = new Category();
-            category.setCategoryId(req.getCategory2());
-            category.setLevel(2);
-            category.setParentCategory(category1);
-            category2 = categoryRepository.save(category);
-        }
-
-        Category category3 = categoryRepository.findByCategoryId(req.getCategory3());
-        if (category3 == null){
-            Category category = new Category();
-            category.setCategoryId(req.getCategory3());
-            category.setParentCategory(category2);
-            category3=categoryRepository.save(category);
-        }
+        System.out.println("✅ Catégorie trouvée: " + productCategory.getName() + " (ID: " + productCategory.getId() + ")");
 
         int discountPercentage = calculateDiscountPercentage(req.getMrpPrice(), req.getSellingPrice());
         Product product = new Product();
         product.setSeller(seller);
-        // Note: category3 est de type Category, mais Product attend ProductCategory
-        // Pour l'instant, on commente car c'est incompatible
-        // TODO: Migrer vers ProductCategory
-        // product.setCategory(category3);
+        product.setCategory(productCategory); // Assigner la catégorie au produit
+        System.out.println("🔗 Catégorie assignée au produit: " + productCategory.getName());
         product.setDescription(req.getDescription());
         product.setCreatedAt(LocalDateTime.now());
         product.setTitle(req.getTitle());
         product.setColor(req.getColor());
         product.setSellingPrice(req.getSellingPrice());
-        // Note: Les images sont maintenant gérées séparément via ProductImageService
-        // product.setImages(req.getImages()); // Supprimé car images est maintenant List<ProductImage>
         product.setMrpPrice(req.getMrpPrice());
         product.setSizes(req.getSizes());
         product.setDiscountPercent(discountPercentage);
 
-        return productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
+        System.out.println("💾 Produit sauvegardé avec l'ID: " + savedProduct.getId() + " et catégorie: " + (savedProduct.getCategory() != null ? savedProduct.getCategory().getName() : "NULL"));
+        
+        return savedProduct;
     }
 
     // Nouvelle méthode pour créer un produit avec un fournisseur
-    public Product createProductWithSupplier(CreateProductRequest req, com.camoutech.multivendor.model.Supplier supplier) {
+    public Product createProductWithSupplier(CreateProductRequest req, com.camoutech.multivendor.model.Supplier supplier) throws ProductException {
 
-        Category category1 = categoryRepository.findByCategoryId(req.getCategory());
-
-        if (category1 == null){
-            Category category = new Category();
-            category.setCategoryId(req.getCategory());
-            category.setLevel(1);
-            category1 = categoryRepository.save(category);
+        // Vérifier que la catégorie existe (OBLIGATOIRE)
+        ProductCategory productCategory = productCategoryRepository.findByNameIgnoreCase(req.getCategory());
+        if (productCategory == null) {
+            System.out.println("❌ Catégorie non trouvée: " + req.getCategory());
+            throw new ProductException("La catégorie '" + req.getCategory() + "' n'existe pas. Veuillez d'abord créer cette catégorie.");
         }
-
-        Category category2 = categoryRepository.findByCategoryId(req.getCategory2());
-
-        if (category2 == null){
-            Category category = new Category();
-            category.setCategoryId(req.getCategory2());
-            category.setLevel(2);
-            category.setParentCategory(category1);
-            category2 = categoryRepository.save(category);
-        }
-
-        Category category3 = categoryRepository.findByCategoryId(req.getCategory3());
-        if (category3 == null){
-            Category category = new Category();
-            category.setCategoryId(req.getCategory3());
-            category.setParentCategory(category2);
-            category3=categoryRepository.save(category);
-        }
+        System.out.println("✅ Catégorie trouvée: " + productCategory.getName() + " (ID: " + productCategory.getId() + ")");
 
         int discountPercentage = calculateDiscountPercentage(req.getMrpPrice(), req.getSellingPrice());
         Product product = new Product();
         product.setSupplier(supplier);
-        // Note: category3 est de type Category, mais Product attend ProductCategory
-        // Pour l'instant, on commente car c'est incompatible
-        // TODO: Migrer vers ProductCategory
-        // product.setCategory(category3);
+        product.setCategory(productCategory); // Assigner la catégorie au produit
         product.setDescription(req.getDescription());
         product.setCreatedAt(LocalDateTime.now());
         product.setTitle(req.getTitle());
         product.setColor(req.getColor());
         product.setSellingPrice(req.getSellingPrice());
         product.setSupplierPrice(req.getMrpPrice()); // Prix fournisseur = MRP pour l'instant
-        // Note: Les images sont maintenant gérées séparément via ProductImageService
-        // product.setImages(req.getImages()); // Supprimé car images est maintenant List<ProductImage>
         product.setMrpPrice(req.getMrpPrice());
         product.setSizes(req.getSizes());
         product.setDiscountPercent(discountPercentage);
@@ -155,9 +108,6 @@ public class ProductServiceImpl implements ProductService {
         product.setOrganic(req.getOrganic() != null ? req.getOrganic() : false);
         product.setLocal(req.getLocal() != null ? req.getLocal() : false);
         product.setFresh(req.getFresh() != null ? req.getFresh() : true);
-
-
-
 
         return productRepository.save(product);
     }
@@ -202,8 +152,8 @@ public class ProductServiceImpl implements ProductService {
             List<Predicate> predicates = new ArrayList<>();
 
             if (category != null){
-                Join<Product, Category> categoryJoin = root.join("category");
-                predicates.add(criteriaBuilder.equal(categoryJoin.get("categoryId"), category));
+                Join<Product, ProductCategory> categoryJoin = root.join("category");
+                predicates.add(criteriaBuilder.equal(categoryJoin.get("name"), category));
             }
             if (colors !=null && !colors.isEmpty()){
                 predicates.add(criteriaBuilder.equal(root.get("color"), colors));

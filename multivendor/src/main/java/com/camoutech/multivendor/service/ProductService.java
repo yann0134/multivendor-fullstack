@@ -12,8 +12,8 @@ import java.util.List;
 
 public interface ProductService {
 
-    public Product createProduct(CreateProductRequest req, Seller seller);
-    public Product createProductWithSupplier(CreateProductRequest req, Supplier supplier);
+    public Product createProduct(CreateProductRequest req, Seller seller) throws ProductException;
+    public Product createProductWithSupplier(CreateProductRequest req, Supplier supplier) throws ProductException;
     public void deleteProduct(Long productId) throws ProductException;
     public Product updateProduct(Long productId, Product product) throws ProductException;
     Product findProductById(Long productId) throws ProductException;
