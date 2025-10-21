@@ -89,6 +89,35 @@
                   ></v-text-field>
                 </v-col>
 
+                <!-- Gestion des stocks -->
+                <v-col cols="12">
+                  <h3 class="text-h6 mb-4 text-warning">📦 Gestion des Stocks</h3>
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model.number="formData.supplierAvailableQuantity"
+                    label="Quantité disponible chez vous *"
+                    type="number"
+                    placeholder="Ex: 100"
+                    hint="Indiquez la quantité totale que vous avez en stock"
+                    persistent-hint
+                    :rules="[v => !!v || 'La quantité est requise', v => v >= 0 || 'La quantité doit être positive']"
+                    required
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-alert
+                    type="info"
+                    variant="tonal"
+                    class="mb-4"
+                  >
+                    <v-icon class="mr-2">mdi-information</v-icon>
+                    L'administrateur pourra demander une quantité spécifique lors de la validation de votre produit.
+                  </v-alert>
+                </v-col>
+
                 <!-- Catégories -->
                 <v-col cols="12">
                   <h3 class="text-h6 mb-4 text-warning">🏷️ Classification</h3>
@@ -362,6 +391,7 @@ const formData = reactive({
   description: '',
   mrpPrice: 0,
   sellingPrice: 0,
+  supplierAvailableQuantity: 0,
   color: '',
   sizes: '',
   category: '',
@@ -398,6 +428,7 @@ const isFormValid = computed(() => {
          formData.description && 
          formData.mrpPrice > 0 && 
          formData.sellingPrice > 0 && 
+         formData.supplierAvailableQuantity >= 0 &&
          formData.category
   console.log('🔍 Validation isFormValid:', {
     title: formData.title,
@@ -500,6 +531,10 @@ const validateForm = () => {
     errors.push('Le prix de vente doit être supérieur à 0')
   }
   
+  if (formData.supplierAvailableQuantity < 0) {
+    errors.push('La quantité disponible doit être positive ou nulle')
+  }
+  
   if (!formData.category || formData.category.trim() === '') {
     errors.push('La catégorie est requise')
   }
@@ -559,6 +594,7 @@ const resetForm = () => {
     description: '',
     mrpPrice: 0,
     sellingPrice: 0,
+    supplierAvailableQuantity: 0,
     color: '',
     sizes: '',
     category: '',

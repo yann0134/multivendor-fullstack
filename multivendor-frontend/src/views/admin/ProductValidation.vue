@@ -93,6 +93,18 @@
                   v-if="item.status === 'PENDING_APPROVAL'"
                   icon 
                   small 
+                  color="primary" 
+                  class="mr-2"
+                  @click="openQuantityDialog(item)"
+                  :loading="processingProducts.includes(item.id)"
+                >
+                  <v-icon>mdi-package-variant</v-icon>
+                </v-btn>
+                
+                <v-btn 
+                  v-if="item.status === 'PENDING_APPROVAL'"
+                  icon 
+                  small 
                   color="error" 
                   class="mr-2"
                   @click="openRejectDialog(item)"
@@ -153,6 +165,45 @@
       </v-card>
     </v-dialog>
 
+    <!-- Dialog de demande de quantité -->
+    <v-dialog v-model="quantityDialog" max-width="500">
+      <v-card>
+        <v-card-title>Demander une Quantité Spécifique</v-card-title>
+        <v-card-text v-if="selectedProduct">
+          <v-alert type="info" variant="tonal" class="mb-4">
+            <strong>Produit:</strong> {{ selectedProduct.title }}<br>
+            <strong>Quantité disponible:</strong> {{ selectedProduct.supplierAvailableQuantity }} unités
+          </v-alert>
+          
+          <v-text-field
+            v-model.number="requestedQuantity"
+            label="Quantité demandée"
+            type="number"
+            :max="selectedProduct.supplierAvailableQuantity"
+            :min="1"
+            :rules="[
+              v => !!v || 'La quantité est requise',
+              v => v > 0 || 'La quantité doit être positive',
+              v => v <= selectedProduct.supplierAvailableQuantity || 'Ne peut pas dépasser la quantité disponible'
+            ]"
+            required
+          ></v-text-field>
+          
+          <v-alert type="warning" variant="tonal" class="mt-4">
+            <v-icon class="mr-2">mdi-information</v-icon>
+            Le fournisseur devra confirmer cette quantité avant que le produit soit approuvé.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="quantityDialog = false">Annuler</v-btn>
+          <v-btn color="primary" @click="confirmQuantityRequest" :loading="requestingQuantity">
+            Demander la Quantité
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Dialog de détails du produit -->
     <v-dialog v-model="detailsDialog" max-width="800">
       <v-card>
@@ -168,6 +219,21 @@
                 <div><strong>Remise:</strong> {{ selectedProduct.discountPercent }}%</div>
                 <div><strong>Couleur:</strong> {{ selectedProduct.color }}</div>
                 <div><strong>Tailles:</strong> {{ selectedProduct.sizes }}</div>
+              </div>
+              
+              <!-- Informations de stock -->
+              <div class="mt-4">
+                <h4>📦 Informations de Stock</h4>
+                <div><strong>Quantité disponible (Fournisseur):</strong> {{ selectedProduct.supplierAvailableQuantity || 0 }} unités</div>
+                <div v-if="selectedProduct.adminRequestedQuantity > 0">
+                  <strong>Quantité demandée (Admin):</strong> {{ selectedProduct.adminRequestedQuantity }} unités
+                </div>
+                <div v-if="selectedProduct.stockNegotiationPending">
+                  <v-chip color="orange" size="small" class="mt-2">
+                    <v-icon left>mdi-clock</v-icon>
+                    Négociation en cours
+                  </v-chip>
+                </div>
               </div>
             </v-col>
             <v-col cols="12" md="6">
@@ -219,6 +285,12 @@ const selectedProductForReject = ref(null)
 const detailsDialog = ref(false)
 const selectedProduct = ref(null)
 
+// Variables pour la gestion des quantités
+const quantityDialog = ref(false)
+const requestingQuantity = ref(false)
+const requestedQuantity = ref(0)
+const selectedProductForQuantity = ref(null)
+
 const statusOptions = [
   { title: 'En Attente', value: 'PENDING_APPROVAL' },
   { title: 'Approuvés', value: 'APPROVED' },
@@ -230,6 +302,8 @@ const headers = [
   { title: 'Produit', key: 'title', sortable: true },
   { title: 'Fournisseur', key: 'supplier', sortable: false },
   { title: 'Prix', key: 'price', sortable: true },
+  { title: 'Stock Fournisseur', key: 'supplierAvailableQuantity', sortable: true },
+  { title: 'Demande Admin', key: 'adminRequestedQuantity', sortable: true },
   { title: 'Statut', key: 'status', sortable: true },
   { title: 'Créé le', key: 'createdAt', sortable: true },
   { title: 'Mis à jour', key: 'statusUpdatedAt', sortable: true },
@@ -358,6 +432,51 @@ const suspendProductAction = async (productId) => {
 const viewProductDetails = (product) => {
   selectedProduct.value = product
   detailsDialog.value = true
+}
+
+// Méthodes pour la gestion des quantités
+const openQuantityDialog = (product) => {
+  selectedProductForQuantity.value = product
+  selectedProduct.value = product
+  requestedQuantity.value = 0
+  quantityDialog.value = true
+}
+
+const confirmQuantityRequest = async () => {
+  if (!requestedQuantity.value || requestedQuantity.value <= 0) {
+    return
+  }
+  
+  requestingQuantity.value = true
+  
+  try {
+    const response = await fetch(`/api/products/${selectedProductForQuantity.value.id}/request-quantity?requestedQuantity=${requestedQuantity.value}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      // Mettre à jour le produit dans la liste
+      const updatedProduct = await response.json()
+      const index = products.value.findIndex(p => p.id === updatedProduct.id)
+      if (index !== -1) {
+        products.value[index] = updatedProduct
+      }
+      
+      quantityDialog.value = false
+      // Afficher un message de succès
+      console.log('✅ Demande de quantité envoyée avec succès')
+    } else {
+      console.error('❌ Erreur lors de la demande de quantité')
+    }
+  } catch (error) {
+    console.error('❌ Erreur:', error)
+  } finally {
+    requestingQuantity.value = false
+  }
 }
 
 onMounted(() => {

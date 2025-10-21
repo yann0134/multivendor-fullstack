@@ -96,6 +96,11 @@ public class ProductServiceImpl implements ProductService {
         product.setPrice(req.getSellingPrice()); // Utiliser le prix de vente comme prix général
         product.setStockQuantity(req.getStockQuantity()); // Stock initial par défaut
         
+        // Gestion des stocks fournisseur
+        product.setSupplierAvailableQuantity(req.getSupplierAvailableQuantity());
+        product.setAdminRequestedQuantity(0); // Pas encore de demande admin
+        product.setStockNegotiationPending(false);
+        
         // Informations agricoles
         product.setOrigin(req.getOrigin());
         product.setFarmingMethod(req.getFarmingMethod());

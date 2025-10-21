@@ -110,6 +110,47 @@
                   ></v-text-field>
                 </v-col>
 
+                <!-- Gestion des stocks -->
+                <v-col cols="12">
+                  <h3 class="mb-4">📦 Gestion des Stocks</h3>
+                  
+                  <v-row>
+                    <v-col cols="12" md="6">
+                      <v-text-field
+                        v-model.number="formData.supplierAvailableQuantity"
+                        label="Quantité disponible chez vous *"
+                        type="number"
+                        :rules="[v => v >= 0 || 'La quantité doit être positive ou nulle']"
+                        required
+                        class="mb-3"
+                        :disabled="product.status === 'APPROVED'"
+                      ></v-text-field>
+                    </v-col>
+                    
+                    <v-col cols="12" md="6">
+                      <v-alert 
+                        v-if="product.adminRequestedQuantity > 0"
+                        type="info" 
+                        variant="tonal"
+                        class="mb-3"
+                      >
+                        <v-icon class="mr-2">mdi-information</v-icon>
+                        <strong>Demande de l'administrateur:</strong> {{ product.adminRequestedQuantity }} unités
+                      </v-alert>
+                      
+                      <v-alert 
+                        v-if="product.status === 'APPROVED'"
+                        type="warning" 
+                        variant="tonal"
+                        class="mb-3"
+                      >
+                        <v-icon class="mr-2">mdi-lock</v-icon>
+                        Ce produit est déjà approuvé. La quantité ne peut plus être modifiée.
+                      </v-alert>
+                    </v-col>
+                  </v-row>
+                </v-col>
+
                 <!-- Informations agricoles -->
                 <v-col cols="12">
                   <h3 class="mb-4">🌱 Informations Agricoles</h3>
@@ -272,6 +313,7 @@ const formData = reactive({
   description: '',
   mrpPrice: 0,
   sellingPrice: 0,
+  supplierAvailableQuantity: 0,
   color: '',
   sizes: '',
   category: '',
@@ -308,6 +350,7 @@ const fetchProduct = async () => {
     formData.description = product.value.description || ''
     formData.mrpPrice = product.value.mrpPrice || 0
     formData.sellingPrice = product.value.sellingPrice || 0
+    formData.supplierAvailableQuantity = product.value.supplierAvailableQuantity || 0
     formData.color = product.value.color || ''
     formData.sizes = product.value.sizes || ''
     formData.category = product.value.category?.name || ''

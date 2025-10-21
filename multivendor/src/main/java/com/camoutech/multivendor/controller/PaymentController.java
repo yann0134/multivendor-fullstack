@@ -24,7 +24,7 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final UserService userService;
     private final SellerService sellerService;
-    private final Orderservice orderservice;
+    private final OrderService orderService;
     private final SellerReportService sellerReportService;
     private final TransactionService transactionService;
 

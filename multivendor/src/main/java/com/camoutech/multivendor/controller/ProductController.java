@@ -300,6 +300,113 @@ public class ProductController {
     }
 
     /**
+     * Demander une quantité spécifique pour un produit (Admin)
+     */
+    @PutMapping("/{productId}/request-quantity")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Product> requestQuantity(
+            @PathVariable Long productId,
+            @RequestParam int requestedQuantity) {
+        
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = auth.getName();
+        
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        
+        // Vérifier que la quantité demandée ne dépasse pas la quantité disponible
+        if (requestedQuantity > product.getSupplierAvailableQuantity()) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        
+        product.setAdminRequestedQuantity(requestedQuantity);
+        product.setStockNegotiationPending(true);
+        product.setStatusUpdatedAt(java.time.LocalDateTime.now());
+        product.setReviewedBy(adminEmail);
+        
+        Product updated = productRepository.save(product);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Confirmer la quantité demandée (Fournisseur)
+     */
+    @PutMapping("/{productId}/confirm-quantity")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<Product> confirmQuantity(@PathVariable Long productId) {
+        
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        
+        // Vérifier que le produit appartient au fournisseur
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        Supplier supplier = supplierRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé"));
+        
+        if (product.getSupplier() == null || !product.getSupplier().getId().equals(supplier.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
+        
+        // Confirmer la quantité et approuver le produit
+        product.setStockQuantity(product.getAdminRequestedQuantity());
+        product.setStockNegotiationPending(false);
+        product.setStatus(Product.ProductStatus.APPROVED);
+        product.setStatusUpdatedAt(java.time.LocalDateTime.now());
+        
+        Product updated = productRepository.save(product);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Modifier la quantité disponible (Fournisseur)
+     */
+    @PutMapping("/{productId}/update-quantity")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<Product> updateQuantity(
+            @PathVariable Long productId,
+            @RequestParam int newQuantity) {
+        
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        
+        // Vérifier que le produit appartient au fournisseur
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        Supplier supplier = supplierRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé"));
+        
+        if (product.getSupplier() == null || !product.getSupplier().getId().equals(supplier.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
+        
+        // Vérifier que le produit n'est pas encore approuvé
+        if (product.getStatus() == Product.ProductStatus.APPROVED) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        
+        // Vérifier que la nouvelle quantité est positive
+        if (newQuantity < 0) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        
+        // Mettre à jour la quantité disponible
+        product.setSupplierAvailableQuantity(newQuantity);
+        
+        // Si l'admin avait demandé une quantité, vérifier si elle est toujours valide
+        if (product.getAdminRequestedQuantity() > 0 && newQuantity < product.getAdminRequestedQuantity()) {
+            // Réinitialiser la demande admin si la nouvelle quantité est insuffisante
+            product.setAdminRequestedQuantity(0);
+            product.setStockNegotiationPending(false);
+        }
+        
+        product.setStatusUpdatedAt(java.time.LocalDateTime.now());
+        
+        Product updated = productRepository.save(product);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
      * Rejeter un produit (Admin)
      */
     @PutMapping("/{productId}/reject")

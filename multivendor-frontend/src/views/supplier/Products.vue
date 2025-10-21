@@ -23,19 +23,113 @@
               :items="products"
               :loading="loading"
             >
+              <template v-slot:item.status="{ item }">
+                <v-chip 
+                  :color="getStatusColor(item.status)" 
+                  :text-color="getStatusTextColor(item.status)"
+                  small
+                >
+                  {{ getStatusText(item.status) }}
+                </v-chip>
+              </template>
+
               <template v-slot:item.actions="{ item }">
-                <v-btn icon @click="editProduct(item)">
-                  <v-icon>mdi-pencil</v-icon>
-                </v-btn>
-                <v-btn icon @click="deleteProduct(item.id)">
-                  <v-icon>mdi-delete</v-icon>
-                </v-btn>
+                <div class="d-flex">
+                  <!-- Bouton pour confirmer la quantité demandée par l'admin -->
+                  <v-btn 
+                    v-if="item.stockNegotiationPending && item.adminRequestedQuantity > 0"
+                    icon 
+                    small 
+                    color="success" 
+                    class="mr-2"
+                    @click="confirmQuantity(item)"
+                    :loading="processingProducts.includes(item.id)"
+                  >
+                    <v-icon>mdi-check-circle</v-icon>
+                  </v-btn>
+                  
+                  <!-- Bouton pour modifier la quantité rapidement -->
+                  <v-btn 
+                    v-if="item.status !== 'APPROVED'"
+                    icon 
+                    small 
+                    color="orange" 
+                    class="mr-2"
+                    @click="openQuantityDialog(item)"
+                    :loading="processingProducts.includes(item.id)"
+                  >
+                    <v-icon>mdi-package-variant</v-icon>
+                  </v-btn>
+                  
+                  <!-- Bouton pour éditer -->
+                  <v-btn 
+                    icon 
+                    small 
+                    color="primary" 
+                    class="mr-2"
+                    @click="editProduct(item)"
+                  >
+                    <v-icon>mdi-pencil</v-icon>
+                  </v-btn>
+                  
+                  <!-- Bouton pour supprimer -->
+                  <v-btn 
+                    icon 
+                    small 
+                    color="error" 
+                    @click="deleteProduct(item.id)"
+                  >
+                    <v-icon>mdi-delete</v-icon>
+                  </v-btn>
+                </div>
               </template>
             </v-data-table>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Dialog pour modifier rapidement la quantité -->
+    <v-dialog v-model="quantityDialog" max-width="400">
+      <v-card>
+        <v-card-title>Modifier la Quantité Disponible</v-card-title>
+        <v-card-text v-if="selectedProduct">
+          <v-alert type="info" variant="tonal" class="mb-4">
+            <strong>Produit:</strong> {{ selectedProduct.title }}<br>
+            <strong>Quantité actuelle:</strong> {{ selectedProduct.supplierAvailableQuantity }} unités
+          </v-alert>
+          
+          <v-text-field
+            v-model.number="newQuantity"
+            label="Nouvelle quantité disponible"
+            type="number"
+            :min="0"
+            :rules="[
+              v => v >= 0 || 'La quantité doit être positive ou nulle'
+            ]"
+            required
+          ></v-text-field>
+          
+          <v-alert 
+            v-if="selectedProduct.adminRequestedQuantity > 0"
+            type="warning" 
+            variant="tonal" 
+            class="mt-4"
+          >
+            <v-icon class="mr-2">mdi-information</v-icon>
+            L'administrateur a demandé {{ selectedProduct.adminRequestedQuantity }} unités. 
+            Si vous réduisez la quantité en dessous de cette valeur, la demande sera annulée.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="quantityDialog = false">Annuler</v-btn>
+          <v-btn color="primary" @click="updateQuantity" :loading="updatingQuantity">
+            Mettre à jour
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -44,12 +138,22 @@ import { ref, onMounted } from 'vue'
 
 const products = ref([])
 const loading = ref(false)
+const processingProducts = ref([])
+
+// Variables pour la modification rapide de quantité
+const quantityDialog = ref(false)
+const selectedProduct = ref(null)
+const newQuantity = ref(0)
+const updatingQuantity = ref(false)
 
 const headers = [
   { title: 'Nom', key: 'title' },
   { title: 'Prix fournisseur', key: 'supplierPrice' },
-  { title: 'Stock', key: 'warehouseQuantity' },
+  { title: 'Stock Disponible', key: 'supplierAvailableQuantity' },
+  { title: 'Demande Admin', key: 'adminRequestedQuantity' },
+  { title: 'Stock Entrepôt', key: 'warehouseQuantity' },
   { title: 'Catégorie', key: 'category.name' },
+  { title: 'Statut', key: 'status' },
   { title: 'Actions', key: 'actions', sortable: false }
 ]
 
@@ -59,6 +163,109 @@ const editProduct = (product) => {
 
 const deleteProduct = (productId) => {
   console.log('Supprimer le produit:', productId)
+}
+
+// Méthodes pour la gestion des statuts
+const getStatusColor = (status) => {
+  const colors = {
+    'PENDING_APPROVAL': 'orange',
+    'APPROVED': 'success',
+    'REJECTED': 'error',
+    'SUSPENDED': 'warning'
+  }
+  return colors[status] || 'grey'
+}
+
+const getStatusTextColor = (status) => {
+  return status === 'PENDING_APPROVAL' ? 'white' : 'white'
+}
+
+const getStatusText = (status) => {
+  const texts = {
+    'PENDING_APPROVAL': 'En Attente',
+    'APPROVED': 'Approuvé',
+    'REJECTED': 'Rejeté',
+    'SUSPENDED': 'Suspendu'
+  }
+  return texts[status] || status
+}
+
+// Méthode pour confirmer la quantité demandée par l'admin
+const confirmQuantity = async (product) => {
+  processingProducts.value.push(product.id)
+  
+  try {
+    const response = await fetch(`/api/products/${product.id}/confirm-quantity`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      // Mettre à jour le produit dans la liste
+      const updatedProduct = await response.json()
+      const index = products.value.findIndex(p => p.id === updatedProduct.id)
+      if (index !== -1) {
+        products.value[index] = updatedProduct
+      }
+      
+      console.log('✅ Quantité confirmée avec succès')
+    } else {
+      console.error('❌ Erreur lors de la confirmation de la quantité')
+    }
+  } catch (error) {
+    console.error('❌ Erreur:', error)
+  } finally {
+    const index = processingProducts.value.indexOf(product.id)
+    if (index > -1) {
+      processingProducts.value.splice(index, 1)
+    }
+  }
+}
+
+// Méthodes pour la modification rapide de quantité
+const openQuantityDialog = (product) => {
+  selectedProduct.value = product
+  newQuantity.value = product.supplierAvailableQuantity
+  quantityDialog.value = true
+}
+
+const updateQuantity = async () => {
+  if (newQuantity.value < 0) {
+    return
+  }
+  
+  updatingQuantity.value = true
+  
+  try {
+    const response = await fetch(`/api/products/${selectedProduct.value.id}/update-quantity?newQuantity=${newQuantity.value}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      // Mettre à jour le produit dans la liste
+      const updatedProduct = await response.json()
+      const index = products.value.findIndex(p => p.id === updatedProduct.id)
+      if (index !== -1) {
+        products.value[index] = updatedProduct
+      }
+      
+      quantityDialog.value = false
+      console.log('✅ Quantité mise à jour avec succès')
+    } else {
+      console.error('❌ Erreur lors de la mise à jour de la quantité')
+    }
+  } catch (error) {
+    console.error('❌ Erreur:', error)
+  } finally {
+    updatingQuantity.value = false
+  }
 }
 
 onMounted(() => {

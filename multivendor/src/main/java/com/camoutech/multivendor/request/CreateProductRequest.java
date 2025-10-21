@@ -18,6 +18,8 @@ public class CreateProductRequest {
     private int mrpPrice;
     private int sellingPrice;
     private int stockQuantity = 0;
+    private int supplierAvailableQuantity = 0; // Quantité disponible chez le fournisseur
+    private int adminRequestedQuantity = 0; // Quantité demandée par l'admin
     private String color;
     private List<String> images;
     private String category;
@@ -34,7 +36,7 @@ public class CreateProductRequest {
     private String storageConditions;
     private String nutritionalInfo;
     private String allergens;
-    private Boolean organic;
-    private Boolean local;
-    private Boolean fresh;
+    private Boolean organic = false;
+    private Boolean local = false;
+    private Boolean fresh = false;
 }

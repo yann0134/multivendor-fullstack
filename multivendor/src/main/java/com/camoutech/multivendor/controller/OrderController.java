@@ -25,7 +25,7 @@ import java.util.Set;
 @RequestMapping("/api/orders")
 public class OrderController {
 
-    private final Orderservice orderservice;
+    private final OrderService orderService;
     private final UserService userService;
     private final CartService cartService;
     private final SellerService sellerService;
@@ -41,7 +41,7 @@ public class OrderController {
 
         User user = userService.findUserByJwtToken(jwt);
         Cart cart = cartService.findUserCart(user);
-        Set<Order> orders = orderservice.createOrder(user, sippingAddress, cart);
+        Set<Order> orders = orderService.createOrder(user, sippingAddress, cart);
 
         PaymentOrder paymentOrder = paymentService.createOrder(user, orders);
         PaymentLinkResponse res = new PaymentLinkResponse();
@@ -73,7 +73,7 @@ public class OrderController {
             String jwt) throws Exception {
 
         User user = userService.findUserByJwtToken(jwt);
-        List<Order> orders = orderservice.usersOrderHistory(user.getId());
+        List<Order> orders = orderService.getOrdersByCustomer(user.getId());
         return new ResponseEntity<>(orders, HttpStatus.ACCEPTED);
     }
 
@@ -84,7 +84,7 @@ public class OrderController {
             String jwt) throws Exception {
 
         User user = userService.findUserByJwtToken(jwt);
-        Order orders = orderservice.findOrderById(orderId);
+        Order orders = orderService.getOrderById(orderId);
         return new ResponseEntity<>(orders, HttpStatus.ACCEPTED);
     }
 
@@ -95,7 +95,7 @@ public class OrderController {
             String jwt) throws Exception {
 
         User user = userService.findUserByJwtToken(jwt);
-        OrderItem orderItem = orderservice.getOrderItemById(orderItemId);
+        OrderItem orderItem = orderService.getOrderItemById(orderItemId);
         return new ResponseEntity<>(orderItem, HttpStatus.ACCEPTED);
     }
 
@@ -105,7 +105,7 @@ public class OrderController {
             @RequestHeader("Authorization") String jwt
     ) throws Exception {
         User user = userService.findUserByJwtToken(jwt);
-        Order order = orderservice.cancelOrder(orderId, user);
+        Order order = orderService.cancelOrder(orderId, user);
 
         Seller seller = sellerService.getSellerById(order.getSellerId());
         SellerReport report = sellerReportService.getSellerReport(seller);

@@ -73,6 +73,37 @@
           />
         </div>
         
+        <!-- Informations de stock -->
+        <div class="mb-4">
+          <h3 class="text-h6 mb-2">📦 Disponibilité</h3>
+          <v-alert 
+            v-if="product.supplierAvailableQuantity > 0"
+            type="success" 
+            variant="tonal"
+            class="mb-2"
+          >
+            <v-icon class="mr-2">mdi-check-circle</v-icon>
+            <strong>{{ product.supplierAvailableQuantity }} unités disponibles</strong>
+          </v-alert>
+          
+          <v-alert 
+            v-else
+            type="warning" 
+            variant="tonal"
+            class="mb-2"
+          >
+            <v-icon class="mr-2">mdi-alert-circle</v-icon>
+            <strong>Rupture de stock</strong> - Ce produit n'est plus disponible
+          </v-alert>
+          
+          <div v-if="product.adminRequestedQuantity > 0" class="mt-2">
+            <v-chip color="info" size="small">
+              <v-icon left>mdi-information</v-icon>
+              Demande admin: {{ product.adminRequestedQuantity }} unités
+            </v-chip>
+          </div>
+        </div>
+        
         <div class="d-flex gap-2">
           <v-btn
             color="primary"
@@ -135,6 +166,74 @@
                 </v-list-item>
               </v-list>
             </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+    
+    <!-- Caractéristiques du produit -->
+    <v-row class="mt-8">
+      <v-col cols="12">
+        <h2 class="text-h5 mb-4">Caractéristiques du produit</h2>
+        <v-card>
+          <v-card-text>
+            <v-row>
+              <v-col cols="12" md="6">
+                <h3 class="text-h6 mb-3">📦 Informations de Stock</h3>
+                <v-list density="compact">
+                  <v-list-item>
+                    <v-list-item-title>Quantité disponible</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip 
+                        :color="product.supplierAvailableQuantity > 0 ? 'success' : 'error'"
+                        size="small"
+                      >
+                        {{ product.supplierAvailableQuantity || 0 }} unités
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.adminRequestedQuantity > 0">
+                    <v-list-item-title>Demande administrateur</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip color="info" size="small">
+                        {{ product.adminRequestedQuantity }} unités
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.stockNegotiationPending">
+                    <v-list-item-title>Statut de négociation</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip color="orange" size="small">
+                        <v-icon left>mdi-clock</v-icon>
+                        En cours
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+              
+              <v-col cols="12" md="6">
+                <h3 class="text-h6 mb-3">💰 Informations de Prix</h3>
+                <v-list density="compact">
+                  <v-list-item>
+                    <v-list-item-title>Prix de vente</v-list-item-title>
+                    <v-list-item-subtitle>{{ product.sellingPrice }}€</v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.mrpPrice > product.sellingPrice">
+                    <v-list-item-title>Prix MRP</v-list-item-title>
+                    <v-list-item-subtitle class="text-decoration-line-through">{{ product.mrpPrice }}€</v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.discountPercent > 0">
+                    <v-list-item-title>Remise</v-list-item-title>
+                    <v-list-item-subtitle>{{ product.discountPercent }}%</v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+            </v-row>
           </v-card-text>
         </v-card>
       </v-col>
