@@ -10,8 +10,10 @@ package com.camoutech.multivendor.service.impl;
 import com.camoutech.multivendor.exceptions.ProductException;
 import com.camoutech.multivendor.model.Category;
 import com.camoutech.multivendor.model.Product;
+import com.camoutech.multivendor.model.ProductCategory;
 import com.camoutech.multivendor.model.Seller;
 import com.camoutech.multivendor.repository.CategoryRepository;
+import com.camoutech.multivendor.repository.ProductCategoryRepository;
 import com.camoutech.multivendor.repository.ProductRepository;
 import com.camoutech.multivendor.request.CreateProductRequest;
 import com.camoutech.multivendor.service.ProductService;
@@ -35,6 +37,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductCategoryRepository productCategoryRepository;
 
     @Override
     public Product createProduct(CreateProductRequest req, Seller seller) {
@@ -135,10 +138,10 @@ public class ProductServiceImpl implements ProductService {
         product.setMrpPrice(req.getMrpPrice());
         product.setSizes(req.getSizes());
         product.setDiscountPercent(discountPercentage);
-        product.setFresh(true); // Par défaut, les produits sont frais
+        product.setFresh(req.getFresh()); // Par défaut, les produits sont frais
         product.setFreshField(true); // Champ fresh supplémentaire
         product.setPrice(req.getSellingPrice()); // Utiliser le prix de vente comme prix général
-        product.setStockQuantity(0); // Stock initial par défaut
+        product.setStockQuantity(req.getStockQuantity()); // Stock initial par défaut
         
         // Informations agricoles
         product.setOrigin(req.getOrigin());
@@ -152,6 +155,9 @@ public class ProductServiceImpl implements ProductService {
         product.setOrganic(req.getOrganic() != null ? req.getOrganic() : false);
         product.setLocal(req.getLocal() != null ? req.getLocal() : false);
         product.setFresh(req.getFresh() != null ? req.getFresh() : true);
+
+
+
 
         return productRepository.save(product);
     }

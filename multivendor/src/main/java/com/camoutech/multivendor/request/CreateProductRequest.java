@@ -17,6 +17,7 @@ public class CreateProductRequest {
     private String description;
     private int mrpPrice;
     private int sellingPrice;
+    private int stockQuantity = 0;
     private String color;
     private List<String> images;
     private String category;
