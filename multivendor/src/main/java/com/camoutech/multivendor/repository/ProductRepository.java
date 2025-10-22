@@ -1,6 +1,7 @@
 package com.camoutech.multivendor.repository;
 
 import com.camoutech.multivendor.model.Product;
+import com.camoutech.multivendor.model.Supplier;
 import com.camoutech.multivendor.model.ProductCategory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -54,4 +55,15 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     
     @Query("SELECT COUNT(p) FROM Product p WHERE p.status = :status")
     Long countByStatus(Product.ProductStatus status);
+
+
+
+
+    // Dans ProductRepository.java
+    @Query("SELECT p FROM Product p " +
+            "WHERE p.supplier.id = :supplierId " +
+            "AND p.receptionStatus = 'PENDING' " +
+            "AND p.status = 'APPROVED' " +
+            "ORDER BY p.createdAt DESC")
+    List<Product> findApprovedAndPendingProductsBySupplier(@Param("supplierId") Long supplierId);
 }

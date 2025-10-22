@@ -10,8 +10,8 @@ import com.camoutech.multivendor.repository.ProductRepository;
 import com.camoutech.multivendor.repository.ProductCategoryRepository;
 import com.camoutech.multivendor.repository.ProductSubCategoryRepository;
 import com.camoutech.multivendor.repository.UserRepository;
- 
 import com.camoutech.multivendor.repository.SupplierRepository;
+import com.camoutech.multivendor.repository.SupplyOrderRepository;
 import com.camoutech.multivendor.request.CreateProductRequest;
 import com.camoutech.multivendor.service.impl.ProductServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +43,7 @@ public class ProductController {
     private final ProductServiceImpl productService;
     private final SupplierRepository supplierRepository;
     private final UserRepository userRepository;
+    private final SupplyOrderRepository supplyOrderRepository;
 
     /**
      * Récupérer tous les produits avec pagination
@@ -176,6 +177,13 @@ public class ProductController {
     @GetMapping("/new")
     public ResponseEntity<List<Product>> getNewProducts() {
         List<Product> products = productRepository.findTop8ByOrderByCreatedAtDesc();
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/supplier/approved")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<List<Product>> getApprovedProductsForCurrentSupplier() {
+        List<Product> products = productService.getApprovedProductsForCurrentSupplier();
         return ResponseEntity.ok(products);
     }
 
@@ -315,7 +323,8 @@ public class ProductController {
                 .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
         
         // Vérifier que la quantité demandée ne dépasse pas la quantité disponible
-        if (requestedQuantity > product.getSupplierAvailableQuantity()) {
+        Integer supplierAvailableQuantity = product.getSupplierAvailableQuantity();
+        if (supplierAvailableQuantity == null || requestedQuantity > supplierAvailableQuantity) {
             return ResponseEntity.badRequest().body(null);
         }
         
@@ -404,6 +413,126 @@ public class ProductController {
         
         Product updated = productRepository.save(product);
         return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Refuser la demande de quantité (Fournisseur)
+     */
+    @PutMapping("/{productId}/reject-quantity-request")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<Product> rejectQuantityRequest(@PathVariable Long productId) {
+        
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        
+        // Vérifier que le produit appartient au fournisseur
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        Supplier supplier = supplierRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé"));
+        
+        if (product.getSupplier() == null || !product.getSupplier().getId().equals(supplier.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
+        
+        // Vérifier qu'il y a une négociation en cours
+        if (!product.isStockNegotiationPending() || product.getAdminRequestedQuantity() <= 0) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        
+        // Refuser la demande et remettre le produit en attente
+        product.setAdminRequestedQuantity(0);
+        product.setStockNegotiationPending(false);
+        product.setStatus(Product.ProductStatus.PENDING_APPROVAL);
+        product.setStatusUpdatedAt(java.time.LocalDateTime.now());
+        
+        Product updated = productRepository.save(product);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Validation finale après confirmation du fournisseur (Admin)
+     */
+    @PutMapping("/{productId}/final-approval")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Product> finalApproval(@PathVariable Long productId) {
+        
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = auth.getName();
+        
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        
+        // Vérifier que le produit est en négociation et que le fournisseur a confirmé
+        if (!product.isStockNegotiationPending() || product.getAdminRequestedQuantity() <= 0) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        
+        // Validation finale - le produit est approuvé
+        product.setStatus(Product.ProductStatus.APPROVED);
+        product.setStockNegotiationPending(false);
+        product.setStatusUpdatedAt(java.time.LocalDateTime.now());
+        product.setReviewedBy(adminEmail);
+        
+        Product updated = productRepository.save(product);
+        
+        // Créer automatiquement une commande d'approvisionnement
+        createSupplyOrderForProduct(updated);
+        
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Créer une commande d'approvisionnement pour un produit approuvé
+     */
+    private void createSupplyOrderForProduct(Product product) {
+        try {
+            // Déterminer la quantité à commander
+            int quantityToOrder = product.getAdminRequestedQuantity() > 0 ? 
+                product.getAdminRequestedQuantity() : product.getSupplierAvailableQuantity();
+            
+            if (quantityToOrder <= 0) {
+                System.out.println("⚠️ Quantité insuffisante pour créer une commande d'approvisionnement");
+                return;
+            }
+            
+            // Créer la commande d'approvisionnement
+            com.camoutech.multivendor.model.SupplyOrder supplyOrder = new com.camoutech.multivendor.model.SupplyOrder();
+            supplyOrder.setSupplier(product.getSupplier());
+            supplyOrder.setStatus(com.camoutech.multivendor.domain.SupplyOrderStatus.PENDING);
+            supplyOrder.setOrderDate(java.time.LocalDateTime.now());
+            
+            // Date de livraison par défaut : 2 jours après validation
+            supplyOrder.setDeliveryDate(java.time.LocalDateTime.now().plusDays(2));
+            
+            // Calculer le montant total
+            double totalAmount = quantityToOrder * product.getSupplierPrice();
+            supplyOrder.setTotalAmount(totalAmount);
+            
+            // Générer un ID de commande unique
+            String orderId = "SO-" + System.currentTimeMillis();
+            supplyOrder.setSupplyOrderId(orderId);
+            
+            // Créer l'item de commande
+            com.camoutech.multivendor.model.SupplyOrderItem orderItem = new com.camoutech.multivendor.model.SupplyOrderItem();
+            orderItem.setProduct(product);
+            orderItem.setQuantity(quantityToOrder);
+            orderItem.setUnitPrice(product.getSupplierPrice());
+            orderItem.setTotalPrice(totalAmount);
+            orderItem.setSupplyOrder(supplyOrder);
+            
+            // Ajouter l'item à la commande
+            supplyOrder.getSupplyOrderItems().add(orderItem);
+            
+            // Sauvegarder la commande
+            supplyOrderRepository.save(supplyOrder);
+            
+            System.out.println("✅ Commande d'approvisionnement créée: " + orderId + 
+                             " pour " + quantityToOrder + " unités de " + product.getTitle());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la création de la commande d'approvisionnement: " + e.getMessage());
+        }
     }
 
     /**

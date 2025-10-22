@@ -13,6 +13,7 @@ import com.camoutech.multivendor.model.ProductCategory;
 import com.camoutech.multivendor.model.Seller;
 import com.camoutech.multivendor.repository.ProductCategoryRepository;
 import com.camoutech.multivendor.repository.ProductRepository;
+import com.camoutech.multivendor.repository.SupplierRepository;
 import com.camoutech.multivendor.request.CreateProductRequest;
 import com.camoutech.multivendor.service.ProductService;
 import jakarta.persistence.criteria.Join;
@@ -23,6 +24,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -35,6 +38,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final SupplierRepository supplierRepository;
 
     @Override
     public Product createProduct(CreateProductRequest req, Seller seller) throws ProductException {
@@ -211,5 +215,16 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<Product> getProductBySellerId(Long sellerId) {
         return productRepository.findBySellerId(sellerId);
+    }
+
+    @Override
+    public List<Product> getApprovedProductsForCurrentSupplier() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+
+        com.camoutech.multivendor.model.Supplier supplier = supplierRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé pour l'email: " + email));
+
+        return productRepository.findByStatusAndSupplier(Product.ProductStatus.APPROVED, supplier, Pageable.unpaged()).getContent();
     }
 }

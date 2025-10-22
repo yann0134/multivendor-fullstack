@@ -82,8 +82,66 @@
               {{ item.statusUpdatedAt ? formatDate(item.statusUpdatedAt) : '-' }}
             </template>
 
+            <!-- Template pour afficher le stock disponible -->
+            <template v-slot:item.supplierAvailableQuantity="{ item }">
+              <div class="d-flex align-center">
+                <v-icon color="blue" size="small" class="mr-1">mdi-package-variant</v-icon>
+                <span class="font-weight-medium">{{ item.supplierAvailableQuantity || 0 }}</span>
+                <span class="text-caption ml-1">unités</span>
+              </div>
+            </template>
+
+            <!-- Template pour afficher la demande admin -->
+            <template v-slot:item.adminRequestedQuantity="{ item }">
+              <div v-if="item.adminRequestedQuantity > 0" class="d-flex align-center">
+                <v-icon color="orange" size="small" class="mr-1">mdi-account-tie</v-icon>
+                <span class="font-weight-medium text-orange">{{ item.adminRequestedQuantity }}</span>
+                <span class="text-caption ml-1">unités</span>
+                <v-chip 
+                  v-if="item.stockNegotiationPending"
+                  color="orange" 
+                  size="x-small" 
+                  class="ml-2"
+                >
+                  Négociation
+                </v-chip>
+              </div>
+              <div v-else class="text-grey-500">
+                <v-icon color="grey" size="small" class="mr-1">mdi-minus</v-icon>
+                Aucune demande
+              </div>
+            </template>
+
             <template v-slot:item.actions="{ item }">
               <div class="d-flex">
+                <!-- Bouton pour confirmer la quantité demandée par l'admin -->
+                <v-btn 
+                  v-if="item.stockNegotiationPending && item.adminRequestedQuantity > 0"
+                  icon 
+                  small 
+                  color="success" 
+                  class="mr-2"
+                  @click="confirmQuantity(item)"
+                  :loading="processingProducts.includes(item.id)"
+                  title="Accepter la demande admin"
+                >
+                  <v-icon>mdi-check-circle</v-icon>
+                </v-btn>
+                
+                <!-- Bouton pour refuser la demande admin -->
+                <v-btn 
+                  v-if="item.stockNegotiationPending && item.adminRequestedQuantity > 0"
+                  icon 
+                  small 
+                  color="error" 
+                  class="mr-2"
+                  @click="rejectQuantityRequest(item)"
+                  :loading="processingProducts.includes(item.id)"
+                  title="Refuser la demande admin"
+                >
+                  <v-icon>mdi-close-circle</v-icon>
+                </v-btn>
+
                 <v-btn 
                   icon 
                   small 
@@ -225,6 +283,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProductsByStatusAndSupplierEmail, deleteProduct as deleteProductApi } from '@/services/products'
+import api from '@/services/api'
 
 const router = useRouter()
 
@@ -234,11 +293,14 @@ const searchQuery = ref('')
 const detailsDialog = ref(false)
 const selectedProduct = ref(null)
 const deletingProducts = ref([])
+const processingProducts = ref([])
 
 const headers = [
   { title: 'Produit', key: 'title', sortable: true },
   { title: 'Statut', key: 'status', sortable: true },
   { title: 'Prix', key: 'price', sortable: true },
+  { title: 'Stock Disponible', key: 'supplierAvailableQuantity', sortable: true },
+  { title: 'Demande Admin', key: 'adminRequestedQuantity', sortable: true },
   { title: 'Créé le', key: 'createdAt', sortable: true },
   { title: 'Mis à jour', key: 'statusUpdatedAt', sortable: true },
   { title: 'Actions', key: 'actions', sortable: false }
@@ -347,6 +409,58 @@ const deleteProduct = async (productId) => {
       console.error('Erreur lors de la suppression:', error)
     } finally {
       deletingProducts.value = deletingProducts.value.filter(id => id !== productId)
+    }
+  }
+}
+
+// Méthode pour confirmer la quantité demandée par l'admin
+const confirmQuantity = async (product) => {
+  processingProducts.value.push(product.id)
+  
+  try {
+    const response = await api.put(`/api/products/${product.id}/confirm-quantity`)
+    
+    if (response.status === 200) {
+      const updatedProduct = response.data
+      const index = products.value.findIndex(p => p.id === updatedProduct.id)
+      if (index !== -1) {
+        products.value[index] = updatedProduct
+      }
+      
+      console.log('✅ Quantité confirmée avec succès')
+    }
+  } catch (error) {
+    console.error('❌ Erreur:', error)
+  } finally {
+    const index = processingProducts.value.indexOf(product.id)
+    if (index > -1) {
+      processingProducts.value.splice(index, 1)
+    }
+  }
+}
+
+// Méthode pour refuser la demande de quantité de l'admin
+const rejectQuantityRequest = async (product) => {
+  processingProducts.value.push(product.id)
+  
+  try {
+    const response = await api.put(`/api/products/${product.id}/reject-quantity-request`)
+    
+    if (response.status === 200) {
+      const updatedProduct = response.data
+      const index = products.value.findIndex(p => p.id === updatedProduct.id)
+      if (index !== -1) {
+        products.value[index] = updatedProduct
+      }
+      
+      console.log('✅ Demande admin refusée avec succès')
+    }
+  } catch (error) {
+    console.error('❌ Erreur:', error)
+  } finally {
+    const index = processingProducts.value.indexOf(product.id)
+    if (index > -1) {
+      processingProducts.value.splice(index, 1)
     }
   }
 }

@@ -69,7 +69,7 @@
         <v-list-item 
           prepend-icon="mdi-truck-delivery" 
           title="Récupérations" 
-          to="/supplier/collections"
+          to="/supplier/collection"
           class="mb-1"
         />
         

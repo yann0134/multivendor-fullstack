@@ -101,6 +101,20 @@
                   <v-icon>mdi-package-variant</v-icon>
                 </v-btn>
                 
+                <!-- Bouton de validation finale après confirmation du fournisseur -->
+                <v-btn 
+                  v-if="item.stockNegotiationPending && item.adminRequestedQuantity > 0"
+                  icon 
+                  small 
+                  color="success" 
+                  class="mr-2"
+                  @click="finalApproval(item.id)"
+                  :loading="processingProducts.includes(item.id)"
+                  title="Validation finale après confirmation fournisseur"
+                >
+                  <v-icon>mdi-check-all</v-icon>
+                </v-btn>
+                
                 <v-btn 
                   v-if="item.status === 'PENDING_APPROVAL'"
                   icon 
@@ -272,6 +286,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { getPendingProducts, getApprovedProducts, getRejectedProducts, approveProduct, rejectProduct, suspendProduct } from '@/services/products'
+import api from '@/services/api'
 
 const products = ref([])
 const loading = ref(false)
@@ -450,17 +465,12 @@ const confirmQuantityRequest = async () => {
   requestingQuantity.value = true
   
   try {
-    const response = await fetch(`/api/products/${selectedProductForQuantity.value.id}/request-quantity?requestedQuantity=${requestedQuantity.value}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    // ✅ Utiliser l'instance API configurée
+    const response = await api.put(`/api/products/${selectedProductForQuantity.value.id}/request-quantity?requestedQuantity=${requestedQuantity.value}`)
     
-    if (response.ok) {
+    if (response.status === 200) {
       // Mettre à jour le produit dans la liste
-      const updatedProduct = await response.json()
+      const updatedProduct = response.data
       const index = products.value.findIndex(p => p.id === updatedProduct.id)
       if (index !== -1) {
         products.value[index] = updatedProduct
@@ -469,13 +479,37 @@ const confirmQuantityRequest = async () => {
       quantityDialog.value = false
       // Afficher un message de succès
       console.log('✅ Demande de quantité envoyée avec succès')
-    } else {
-      console.error('❌ Erreur lors de la demande de quantité')
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
   } finally {
     requestingQuantity.value = false
+  }
+}
+
+// Validation finale après confirmation du fournisseur
+const finalApproval = async (productId) => {
+  processingProducts.value.push(productId)
+  
+  try {
+    const response = await api.put(`/api/products/${productId}/final-approval`)
+    
+    if (response.status === 200) {
+      const updatedProduct = response.data
+      const index = products.value.findIndex(p => p.id === updatedProduct.id)
+      if (index !== -1) {
+        products.value[index] = updatedProduct
+      }
+      
+      console.log('✅ Validation finale effectuée avec succès')
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de la validation finale:', error)
+  } finally {
+    const index = processingProducts.value.indexOf(productId)
+    if (index > -1) {
+      processingProducts.value.splice(index, 1)
+    }
   }
 }
 

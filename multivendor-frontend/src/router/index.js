@@ -41,6 +41,8 @@ import SupplierProductList from '@/views/supplier/SupplierProducts.vue'
 import SupplierEditProduct from '@/views/supplier/EditProduct.vue'
 import SupplierOrders from '@/views/supplier/Orders.vue'
 import SupplierProfile from '@/views/supplier/Profile.vue'
+import SupplierCollection from '@/views/supplier/Collection.vue'
+import SupplierCollectionDetail from '@/views/supplier/CollectionDetail.vue'
 
 // Vues livreur/agent
 import DeliveryDashboard from '@/views/delivery/Dashboard.vue'
@@ -204,6 +206,16 @@ const routes = [
         path: 'orders',
         name: 'SupplierOrders',
         component: SupplierOrders
+      },
+      {
+        path: 'collection',
+        name: 'SupplierCollection',
+        component: SupplierCollection
+      },
+      {
+        path: 'collection/:id',
+        name: 'SupplierCollectionDetail',
+        component: SupplierCollectionDetail
       },
       {
         path: 'profile',

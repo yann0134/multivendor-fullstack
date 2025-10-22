@@ -44,8 +44,23 @@
                     class="mr-2"
                     @click="confirmQuantity(item)"
                     :loading="processingProducts.includes(item.id)"
+                    title="Accepter la demande admin"
                   >
                     <v-icon>mdi-check-circle</v-icon>
+                  </v-btn>
+                  
+                  <!-- Bouton pour refuser la demande admin -->
+                  <v-btn 
+                    v-if="item.stockNegotiationPending && item.adminRequestedQuantity > 0"
+                    icon 
+                    small 
+                    color="error" 
+                    class="mr-2"
+                    @click="rejectQuantityRequest(item)"
+                    :loading="processingProducts.includes(item.id)"
+                    title="Refuser la demande admin"
+                  >
+                    <v-icon>mdi-close-circle</v-icon>
                   </v-btn>
                   
                   <!-- Bouton pour modifier la quantité rapidement -->
@@ -135,6 +150,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import api from '@/services/api'
 
 const products = ref([])
 const loading = ref(false)
@@ -195,25 +211,46 @@ const confirmQuantity = async (product) => {
   processingProducts.value.push(product.id)
   
   try {
-    const response = await fetch(`/api/products/${product.id}/confirm-quantity`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    // ✅ Utiliser l'instance API configurée
+    const response = await api.put(`/api/products/${product.id}/confirm-quantity`)
     
-    if (response.ok) {
+    if (response.status === 200) {
       // Mettre à jour le produit dans la liste
-      const updatedProduct = await response.json()
+      const updatedProduct = response.data
       const index = products.value.findIndex(p => p.id === updatedProduct.id)
       if (index !== -1) {
         products.value[index] = updatedProduct
       }
       
       console.log('✅ Quantité confirmée avec succès')
-    } else {
-      console.error('❌ Erreur lors de la confirmation de la quantité')
+    }
+  } catch (error) {
+    console.error('❌ Erreur:', error)
+  } finally {
+    const index = processingProducts.value.indexOf(product.id)
+    if (index > -1) {
+      processingProducts.value.splice(index, 1)
+    }
+  }
+}
+
+// Méthode pour refuser la demande de quantité de l'admin
+const rejectQuantityRequest = async (product) => {
+  processingProducts.value.push(product.id)
+  
+  try {
+    // ✅ Utiliser l'instance API configurée
+    const response = await api.put(`/api/products/${product.id}/reject-quantity-request`)
+    
+    if (response.status === 200) {
+      // Mettre à jour le produit dans la liste
+      const updatedProduct = response.data
+      const index = products.value.findIndex(p => p.id === updatedProduct.id)
+      if (index !== -1) {
+        products.value[index] = updatedProduct
+      }
+      
+      console.log('✅ Demande admin refusée avec succès')
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
@@ -240,17 +277,12 @@ const updateQuantity = async () => {
   updatingQuantity.value = true
   
   try {
-    const response = await fetch(`/api/products/${selectedProduct.value.id}/update-quantity?newQuantity=${newQuantity.value}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    // ✅ Utiliser l'instance API configurée
+    const response = await api.put(`/api/products/${selectedProduct.value.id}/update-quantity?newQuantity=${newQuantity.value}`)
     
-    if (response.ok) {
+    if (response.status === 200) {
       // Mettre à jour le produit dans la liste
-      const updatedProduct = await response.json()
+      const updatedProduct = response.data
       const index = products.value.findIndex(p => p.id === updatedProduct.id)
       if (index !== -1) {
         products.value[index] = updatedProduct
@@ -258,8 +290,6 @@ const updateQuantity = async () => {
       
       quantityDialog.value = false
       console.log('✅ Quantité mise à jour avec succès')
-    } else {
-      console.error('❌ Erreur lors de la mise à jour de la quantité')
     }
   } catch (error) {
     console.error('❌ Erreur:', error)
@@ -268,7 +298,22 @@ const updateQuantity = async () => {
   }
 }
 
+// Fonction pour charger les produits du fournisseur
+const fetchProducts = async () => {
+  loading.value = true
+  try {
+    // Récupérer les produits du fournisseur connecté
+    const response = await api.get('/api/products/supplier')
+    products.value = response.data
+    console.log('📦 Produits chargés:', products.value)
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement des produits:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(() => {
-  // Charger les produits du fournisseur
+  fetchProducts()
 })
 </script>

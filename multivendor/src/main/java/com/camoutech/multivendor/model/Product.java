@@ -112,6 +112,13 @@ public class Product {
     private int supplierAvailableQuantity = 0; // Quantité disponible chez le fournisseur
     private int adminRequestedQuantity = 0; // Quantité demandée par l'admin
     private boolean stockNegotiationPending = false; // Négociation de stock en cours
+    
+    // Gestion de l'envoi et de la réception
+    @Enumerated(EnumType.STRING)
+    private ShipmentStatus shipmentStatus = ShipmentStatus.NOT_SHIPPED; // Statut d'envoi par le fournisseur
+    
+    @Enumerated(EnumType.STRING)
+    private ReceptionStatus receptionStatus = ReceptionStatus.PENDING; // Statut de réception par l'entrepôt
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -178,6 +185,46 @@ public class Product {
         private final String description;
 
         ProductStatus(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    // Enum pour le statut d'envoi par le fournisseur
+    public enum ShipmentStatus {
+        NOT_SHIPPED("Non expédié"),
+        PREPARING("En préparation"),
+        SHIPPED("Expédié"),
+        IN_TRANSIT("En transit"),
+        DELIVERED("Livré à l'entrepôt"),
+        FAILED_DELIVERY("Échec de livraison");
+
+        private final String description;
+
+        ShipmentStatus(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    // Enum pour le statut de réception par l'entrepôt
+    public enum ReceptionStatus {
+        PENDING("En attente de réception"),
+        RECEIVED("Reçu"),
+        PARTIALLY_RECEIVED("Partiellement reçu"),
+        REJECTED("Rejeté"),
+        DAMAGED("Endommagé"),
+        QUANTITY_MISMATCH("Écart de quantité");
+
+        private final String description;
+
+        ReceptionStatus(String description) {
             this.description = description;
         }
 

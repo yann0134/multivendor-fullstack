@@ -105,7 +105,7 @@
           <v-icon size="48" class="mb-2">mdi-truck-delivery</v-icon>
           <h3 class="text-h6">Récupérations</h3>
           <p class="text-h4">{{ stats.pendingCollection }}</p>
-          <v-btn small color="white" text @click="viewCollections">
+          <v-btn small color="white" text @click="$router.push('/supplier/collection')">
             Voir
           </v-btn>
         </v-card>
@@ -141,7 +141,7 @@
                   Gérer les Images
                 </v-btn>
               </v-col>
-              <v-col cols="12" md="4">
+              <v-col cols="12" md="3">
                 <v-btn
                   color="info"
                   large
@@ -150,6 +150,17 @@
                 >
                   <v-icon left>mdi-clipboard-list</v-icon>
                   Mes Commandes
+                </v-btn>
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-btn
+                  color="blue"
+                  large
+                  block
+                  @click="$router.push('/supplier/collection')"
+                >
+                  <v-icon left>mdi-truck-delivery</v-icon>
+                  Récupérations
                 </v-btn>
               </v-col>
             </v-row>

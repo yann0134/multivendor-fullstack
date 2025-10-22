@@ -31,4 +31,5 @@ public interface ProductService {
             Integer pageNumber
     );
     List<Product> getProductBySellerId(Long sellerId);
+    List<Product> getApprovedProductsForCurrentSupplier();
 }
