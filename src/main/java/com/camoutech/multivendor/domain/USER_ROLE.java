@@ -12,7 +12,7 @@ public enum USER_ROLE {
     ROLE_ADMIN,
     ROLE_CUSTOMER,
     ROLE_SELLER,
-    ROLE_SUPPLIER,
+    ROLE_SUPPLIER,     // Fournisseur
     ROLE_DELIVERY,
     ROLE_WAREHOUSE
 }

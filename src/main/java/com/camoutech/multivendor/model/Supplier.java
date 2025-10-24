@@ -11,6 +11,7 @@ import com.camoutech.multivendor.domain.AccountStatus;
 import com.camoutech.multivendor.domain.USER_ROLE;
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,8 +55,10 @@ public class Supplier {
     private AccountStatus accountStatus = AccountStatus.PENDING_VERIFICATION;
 
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<SupplyOrder> supplyOrders = new ArrayList<>();
 
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Product> suppliedProducts = new ArrayList<>();
 }

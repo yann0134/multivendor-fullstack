@@ -9,6 +9,7 @@ package com.camoutech.multivendor.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -31,4 +32,12 @@ public class VerificationCode {
 
     @OneToOne
     private Seller seller;
+    
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

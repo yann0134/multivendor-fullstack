@@ -10,7 +10,7 @@ package com.camoutech.multivendor.controller;
 import com.camoutech.multivendor.domain.OrderStatus;
 import com.camoutech.multivendor.model.Order;
 import com.camoutech.multivendor.model.Seller;
-import com.camoutech.multivendor.service.Orderservice;
+import com.camoutech.multivendor.service.OrderService;
 import com.camoutech.multivendor.service.SellerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,14 +24,14 @@ import java.util.List;
 @RequestMapping("/api/seller/orders")
 public class SellerOrderController {
 
-    private final Orderservice orderservice;
+    private final OrderService orderService;
     private final SellerService sellerService;
 
     @GetMapping()
     public ResponseEntity<List<Order>> getAllOrdersHandler(
             @RequestHeader("Authorization") String jwt) throws Exception {
         Seller seller = sellerService.getSellerProfile(jwt);
-        List<Order> orders = orderservice.sellersOrder(seller.getId());
+        List<Order> orders = orderService.getOrdersBySeller(seller.getId());
 
         return new ResponseEntity<>(orders, HttpStatus.ACCEPTED);
     }
@@ -42,7 +42,7 @@ public class SellerOrderController {
             @PathVariable Long orderId,
             @PathVariable OrderStatus orderStatus) throws Exception {
 
-        Order order = orderservice.updateOrderStatus(orderId, orderStatus);
+        Order order = orderService.updateOrderStatus(orderId, orderStatus);
 
         return new ResponseEntity<>(order, HttpStatus.ACCEPTED);
     }

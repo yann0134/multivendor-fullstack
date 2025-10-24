@@ -10,8 +10,8 @@ package com.camoutech.multivendor.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -28,7 +28,8 @@ public class Cart {
     private User user;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<CartItem> cartItems = new HashSet<>();
+    @OrderBy("id ASC")
+    private List<CartItem> cartItems = new ArrayList<>();
 
     private double totalSellingPrice;
 

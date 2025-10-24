@@ -37,10 +37,26 @@ public class AuhController {
 
         String jwt = authService.createUser(req);
 
+        // Déterminer le rôle basé sur l'email original (avant suppression du préfixe)
+        USER_ROLE userRole = USER_ROLE.ROLE_CUSTOMER; // Par défaut
+        String originalEmail = req.getEmail();
+        
+        if (originalEmail.startsWith("seller_")) {
+            userRole = USER_ROLE.ROLE_SELLER;
+        } else if (originalEmail.startsWith("supplier_")) {
+            userRole = USER_ROLE.ROLE_SUPPLIER;
+        } else if (originalEmail.startsWith("delivery_")) {
+            userRole = USER_ROLE.ROLE_DELIVERY;
+        } else if (originalEmail.startsWith("warehouse_")) {
+            userRole = USER_ROLE.ROLE_WAREHOUSE;
+        } else if (originalEmail.startsWith("admin_")) {
+            userRole = USER_ROLE.ROLE_ADMIN;
+        }
+
         AuthResponse res = new AuthResponse();
         res.setJwt(jwt);
         res.setMessage("register success");
-        res.setRole(USER_ROLE.ROLE_CUSTOMER);
+        res.setRole(userRole);
         
         return ResponseEntity.ok(res);
     }
