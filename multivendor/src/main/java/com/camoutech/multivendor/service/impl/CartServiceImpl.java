@@ -17,6 +17,8 @@ import com.camoutech.multivendor.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+
 @Service
 @RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
@@ -52,6 +54,14 @@ public class CartServiceImpl implements CartService {
     @Override
     public Cart findUserCart(User user) {
         Cart cart = cartRepository.findByUserId(user.getId());
+        
+        // Si aucun panier n'existe, en créer un nouveau
+        if (cart == null) {
+            cart = new Cart();
+            cart.setUser(user);
+            cart.setCartItems(new ArrayList<>());
+            cart = cartRepository.save(cart);
+        }
 
         int totalPrice = 0;
         int totalDiscountedPrice = 0;

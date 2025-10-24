@@ -13,7 +13,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('jwt_token')
-    if (token) {
+    if (token && token !== 'null' && token.trim() !== '') {
       config.headers.Authorization = `Bearer ${token}`
     }
     
@@ -23,7 +23,8 @@ api.interceptors.request.use(
       url: config.url,
       baseURL: config.baseURL,
       fullURL: `${config.baseURL}${config.url}`,
-      headers: config.headers
+      headers: config.headers,
+      hasToken: !!(token && token !== 'null' && token.trim() !== '')
     })
     
     return config

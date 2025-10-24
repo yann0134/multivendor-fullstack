@@ -1,5 +1,7 @@
 <template>
   <v-container v-if="product">
+    <!-- Modal d'authentification -->
+    <AuthModal ref="authModal" />
     <v-row>
       <v-col cols="12" md="6">
         <!-- Galerie d'images du produit -->
@@ -118,7 +120,7 @@
           <v-btn
             color="primary"
             size="large"
-            @click="addToCart"
+            @click="handleAddToCart"
             :loading="loading"
             :disabled="!selectedVariety || !selectedPackaging"
           >
@@ -354,12 +356,16 @@ import { useCartStore } from '@/stores/cart'
 import { useReviewStore } from '@/stores/reviews'
 import ProductImageGallery from '@/components/customer/ProductImageGallery.vue'
 import NotificationToast from '@/components/common/NotificationToast.vue'
+import AuthModal from '@/components/common/AuthModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
 const cartStore = useCartStore()
 const reviewStore = useReviewStore()
+
+// Référence au modal d'authentification
+const authModal = ref(null)
 
 const product = ref(null)
 const productImages = ref([])
@@ -373,6 +379,12 @@ const reviews = computed(() => reviewStore.reviews)
 const showNotification = ref(false)
 const notificationMessage = ref('')
 const notificationType = ref('info')
+
+// Vérifier si l'utilisateur est authentifié
+const isAuthenticated = computed(() => {
+  const token = localStorage.getItem('jwt_token')
+  return token && token !== 'null' && token.trim() !== ''
+})
 
 // Options dynamiques selon le type de produit
 const varieties = computed(() => {
@@ -422,6 +434,12 @@ const addToCart = async () => {
   } catch (error) {
     console.error('Erreur lors de l\'ajout au panier:', error)
     
+    // Si l'erreur est liée à l'authentification, afficher le modal
+    if (error.message === 'AUTHENTICATION_REQUIRED') {
+      showAuthModal()
+      return
+    }
+    
     // Afficher notification d'erreur
     showNotification.value = true
     notificationMessage.value = error.message || 'Erreur lors de l\'ajout au panier'
@@ -434,6 +452,25 @@ const addToCart = async () => {
 const buyNow = async () => {
   await addToCart()
   router.push('/customer/checkout')
+}
+
+// Gestion du clic sur le bouton "Ajouter au panier"
+const handleAddToCart = () => {
+  // Si l'utilisateur n'est pas authentifié, afficher le modal
+  if (!isAuthenticated.value) {
+    showAuthModal()
+    return
+  }
+  
+  // Sinon, procéder à l'ajout au panier
+  addToCart()
+}
+
+// Méthode pour afficher le modal d'authentification
+const showAuthModal = () => {
+  if (authModal.value) {
+    authModal.value.openModal()
+  }
 }
 
 // Fonction de formatage des prix

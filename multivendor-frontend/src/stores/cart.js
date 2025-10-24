@@ -62,14 +62,17 @@ export const useCartStore = defineStore('cart', () => {
 
   // Ajouter un produit au panier avec options spécifiques
   const addToCart = async (product, quantity = 1, options = {}) => {
+    console.log('addToCart called with:', product, quantity, options)
+    
+    // Vérifier si l'utilisateur est authentifié
+    const token = localStorage.getItem('jwt_token')
+    if (!token || token === 'null' || token.trim() === '') {
+      // L'utilisateur n'est pas authentifié, retourner une erreur spéciale
+      throw new Error('AUTHENTICATION_REQUIRED')
+    }
+    
     loading.value = true
     try {
-      // Vérifier si l'utilisateur est authentifié
-      const token = localStorage.getItem('jwt_token')
-      if (!token) {
-        throw new Error('Utilisateur non authentifié. Veuillez vous connecter.')
-      }
-
       // Préparer les données selon l'API backend
       const cartData = {
         productId: product.id,

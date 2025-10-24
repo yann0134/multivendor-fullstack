@@ -13,10 +13,9 @@ export const useProductStore = defineStore('products', () => {
   const selectedCategory = ref(null)
   const selectedSubCategory = ref(null)
   const filters = ref({
-    type: null, // ANIMAL ou VEGETAL
     organic: false,
     local: false,
-    priceRange: [0, 10000],
+    priceRange: [0, 100000],
     sortBy: 'createdAt',
     sortOrder: 'desc'
   })
@@ -45,14 +44,23 @@ export const useProductStore = defineStore('products', () => {
       })
 
       // Ajouter les filtres
-      if (filters.value.type) {
-        queryParams.append('type', filters.value.type)
-      }
       if (filters.value.organic) {
         queryParams.append('organic', 'true')
       }
       if (filters.value.local) {
         queryParams.append('local', 'true')
+      }
+      if (filters.value.category) {
+        queryParams.append('category', filters.value.category)
+      }
+      if (filters.value.subCategory) {
+        queryParams.append('subCategory', filters.value.subCategory)
+      }
+      
+      // Ajouter le filtre par prix
+      if (filters.value.priceRange && filters.value.priceRange.length === 2) {
+        queryParams.append('minPrice', filters.value.priceRange[0])
+        queryParams.append('maxPrice', filters.value.priceRange[1])
       }
 
       // Filtrer uniquement les produits reçus par l'entrepôt
@@ -290,16 +298,26 @@ export const useProductStore = defineStore('products', () => {
     }
   }
 
+  const fetchPriceRange = async () => {
+    try {
+      const response = await api.get('/api/products/price-range')
+      return response.data
+    } catch (error) {
+      console.error('Erreur lors du chargement de la gamme de prix:', error)
+      // Retourner des valeurs par défaut en cas d'erreur
+      return { minPrice: 0, maxPrice: 100000 }
+    }
+  }
+
   const setFilters = (newFilters) => {
     filters.value = { ...filters.value, ...newFilters }
   }
 
   const clearFilters = () => {
     filters.value = {
-      type: null,
       organic: false,
       local: false,
-      priceRange: [0, 10000],
+      priceRange: [0, 100000],
       sortBy: 'createdAt',
       sortOrder: 'desc'
     }
@@ -356,6 +374,7 @@ export const useProductStore = defineStore('products', () => {
     fetchNewProducts,
     fetchOrganicProducts,
     fetchLocalProducts,
+    fetchPriceRange,
     setFilters,
     clearFilters,
     clearProducts,

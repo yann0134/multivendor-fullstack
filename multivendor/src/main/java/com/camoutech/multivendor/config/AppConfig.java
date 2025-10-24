@@ -25,41 +25,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import java.util.Collections;
 
 @Configuration
-@EnableWebSecurity
 public class AppConfig {
-
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
-        http.sessionManagement(management->management.sessionCreationPolicy(
-                SessionCreationPolicy.STATELESS
-        )).authorizeHttpRequests(authorize->authorize
-                .requestMatchers("/api/**").authenticated()
-                .requestMatchers("/api/products/*/reviews").permitAll()
-                .anyRequest().permitAll()
-        ).addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
-                .csrf(csrf->csrf.disable())
-                .cors(cors->cors.configurationSource(corsConfigurationSource()));
-                return http.build();
-    }
-
-    private CorsConfigurationSource corsConfigurationSource() {
-        return new CorsConfigurationSource() {
-            @Override
-            public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
-
-                CorsConfiguration cfg = new CorsConfiguration();
-                // Spécifier les origines autorisées explicitement au lieu d'utiliser "*"
-                cfg.setAllowedOriginPatterns(Collections.singletonList("*"));
-                cfg.setAllowedMethods(Collections.singletonList("*"));
-                cfg.setAllowedHeaders(Collections.singletonList("*"));
-                cfg.setAllowCredentials(true);
-                cfg.setExposedHeaders(Collections.singletonList("Authorization"));
-                cfg.setMaxAge(3600L);
-                return cfg;
-            }
-        };
-        //return null;
-    }
 
     @Bean
     PasswordEncoder passwordEncoder(){

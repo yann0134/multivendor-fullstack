@@ -62,15 +62,53 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice,
+            @RequestParam(required = false) Boolean organic,
+            @RequestParam(required = false) Boolean local,
+            @RequestParam(required = false) Long category,
+            @RequestParam(required = false) Long subCategory) {
         
         Sort sort = sortDir.equalsIgnoreCase("desc") ? 
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Product> products = productRepository.findCustomerAvailableProducts(pageable);
+        
+        // Utiliser la méthode avec filtres si fournis
+        Page<Product> products;
+        if (minPrice != null || maxPrice != null || organic != null || local != null || category != null || subCategory != null) {
+            products = productRepository.findCustomerAvailableProductsWithFilters(
+                minPrice != null ? minPrice : 0, 
+                maxPrice != null ? maxPrice : Integer.MAX_VALUE,
+                organic,
+                local,
+                category,
+                subCategory,
+                pageable
+            );
+        } else {
+            products = productRepository.findCustomerAvailableProducts(pageable);
+        }
         
         return ResponseEntity.ok(products);
+    }
+
+    /**
+     * Récupérer les prix min/max des produits disponibles
+     */
+    @GetMapping("/price-range")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<Map<String, Integer>> getPriceRange() {
+        Integer minPrice = productRepository.findMinSellingPrice();
+        Integer maxPrice = productRepository.findMaxSellingPrice();
+        
+        Map<String, Integer> priceRange = Map.of(
+            "minPrice", minPrice != null ? minPrice : 0,
+            "maxPrice", maxPrice != null ? maxPrice : 100000
+        );
+        
+        return ResponseEntity.ok(priceRange);
     }
 
     /**

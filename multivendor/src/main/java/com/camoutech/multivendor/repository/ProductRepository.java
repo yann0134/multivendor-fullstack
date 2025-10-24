@@ -147,4 +147,32 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     // Méthode pour récupérer les nouveaux produits pour les clients (approuvés par l'entrepôt dans les 2 derniers jours)
     @Query("SELECT p FROM Product p WHERE p.status = 'APPROVED' AND p.receptionStatus = 'RECEIVED' AND p.shipmentStatus = 'DELIVERED' AND p.statusUpdatedAt >= CURRENT_DATE - 2 ORDER BY p.statusUpdatedAt DESC")
     List<Product> findCustomerNewProducts();
+    
+    // Méthode pour récupérer les produits par gamme de prix pour les clients
+    @Query("SELECT p FROM Product p WHERE p.status = 'APPROVED' AND p.receptionStatus = 'RECEIVED' AND p.shipmentStatus = 'DELIVERED' AND p.sellingPrice >= :minPrice AND p.sellingPrice <= :maxPrice")
+    Page<Product> findCustomerAvailableProductsByPriceRange(@Param("minPrice") Integer minPrice, @Param("maxPrice") Integer maxPrice, Pageable pageable);
+    
+    // Méthode pour récupérer les produits avec tous les filtres pour les clients
+    @Query("SELECT p FROM Product p WHERE p.status = 'APPROVED' AND p.receptionStatus = 'RECEIVED' AND p.shipmentStatus = 'DELIVERED' " +
+           "AND (:minPrice IS NULL OR p.sellingPrice >= :minPrice) " +
+           "AND (:maxPrice IS NULL OR p.sellingPrice <= :maxPrice) " +
+           "AND (:organic IS NULL OR p.organic = :organic) " +
+           "AND (:local IS NULL OR p.local = :local) " +
+           "AND (:category IS NULL OR p.category.id = :category) " +
+           "AND (:subCategory IS NULL OR p.subCategory.id = :subCategory)")
+    Page<Product> findCustomerAvailableProductsWithFilters(
+        @Param("minPrice") Integer minPrice, 
+        @Param("maxPrice") Integer maxPrice,
+        @Param("organic") Boolean organic,
+        @Param("local") Boolean local,
+        @Param("category") Long category,
+        @Param("subCategory") Long subCategory,
+        Pageable pageable);
+    
+    // Méthodes pour récupérer les prix min/max des produits disponibles
+    @Query("SELECT MIN(p.sellingPrice) FROM Product p WHERE p.status = 'APPROVED' AND p.receptionStatus = 'RECEIVED' AND p.shipmentStatus = 'DELIVERED'")
+    Integer findMinSellingPrice();
+    
+    @Query("SELECT MAX(p.sellingPrice) FROM Product p WHERE p.status = 'APPROVED' AND p.receptionStatus = 'RECEIVED' AND p.shipmentStatus = 'DELIVERED'")
+    Integer findMaxSellingPrice();
 }

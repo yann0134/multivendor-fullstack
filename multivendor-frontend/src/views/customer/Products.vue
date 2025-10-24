@@ -1,5 +1,7 @@
 <template>
   <v-container>
+    <!-- Modal d'authentification -->
+    <AuthModal ref="authModal" />
     <!-- En-tête avec recherche -->
     <v-row>
       <v-col cols="12">
@@ -48,15 +50,6 @@
           </v-card-title>
           
           <v-card-text>
-            <!-- Type de produit -->
-            <v-select
-              v-model="filters.type"
-              label="Type de produit"
-              :items="typeOptions"
-              clearable
-              @update:model-value="applyFilters"
-              class="mb-4"
-            />
             
             <!-- Catégorie -->
             <v-select
@@ -99,12 +92,12 @@
               <label class="text-subtitle-2 mb-2 d-block">Prix ( FCFA)</label>
             <v-range-slider
               v-model="priceRange"
-              :min="0"
-                :max="10000"
-                :step="100"
+              :min="priceRangeLimits.min"
+              :max="priceRangeLimits.max"
+              :step="500"
               thumb-label
               @update:model-value="updatePriceFilter"
-                class="mt-2"
+              class="mt-2"
             />
               <div class="d-flex justify-space-between text-caption text-grey">
                 <span>{{ formatPrice(priceRange[0]) }}</span>
@@ -168,7 +161,8 @@
           >
             <ProductCard
               :product="product"
-                :view-mode="viewMode"
+              :view-mode="viewMode"
+              @showAuthModal="showAuthModal"
             />
           </v-col>
         </v-row>
@@ -206,10 +200,14 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/products'
 import ProductCard from '@/components/customer/ProductCard.vue'
+import AuthModal from '@/components/common/AuthModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
+
+// Référence au modal d'authentification
+const authModal = ref(null)
 
 // État local
 const searchQuery = ref('')
@@ -219,7 +217,6 @@ const viewMode = ref('grid')
 
 // Filtres
 const filters = ref({
-  type: null,
   category: null,
   subCategory: null,
   organic: false,
@@ -227,13 +224,10 @@ const filters = ref({
   sortBy: 'createdAt'
 })
 
-const priceRange = ref([0, 10000])
+const priceRange = ref([0, 100000])
+const priceRangeLimits = ref({ min: 0, max: 100000 })
 
 // Options pour les sélecteurs
-const typeOptions = ref([
-  { title: '🌱 Produits Végétaux', value: 'VEGETAL' },
-  { title: '🐄 Produits Animaux', value: 'ANIMAL' }
-])
 
 const categoryOptions = ref([])
 const subCategoryOptions = ref([])
@@ -248,13 +242,12 @@ const sortOptions = ref([
 
 // Computed
 const hasActiveFilters = computed(() => {
-  return filters.value.type || 
-         filters.value.category || 
+  return filters.value.category || 
          filters.value.subCategory || 
          filters.value.organic || 
          filters.value.local ||
-         priceRange.value[0] > 0 || 
-         priceRange.value[1] < 10000
+         priceRange.value[0] > priceRangeLimits.value.min || 
+         priceRange.value[1] < priceRangeLimits.value.max
 })
 
 // Méthodes
@@ -274,10 +267,6 @@ const getResultsText = () => {
     const category = categoryOptions.value.find(c => c.value === filters.value.category)
     return category ? category.title : 'Produits'
   }
-  if (filters.value.type) {
-    const type = typeOptions.value.find(t => t.value === filters.value.type)
-    return type ? type.title : 'Produits'
-  }
   return 'Tous les produits'
 }
 
@@ -290,6 +279,20 @@ const loadCategories = async () => {
     }))
   } catch (error) {
     console.error('Erreur lors du chargement des catégories:', error)
+  }
+}
+
+const loadPriceRange = async () => {
+  try {
+    const range = await productStore.fetchPriceRange()
+    priceRangeLimits.value = {
+      min: range.minPrice || 0,
+      max: range.maxPrice || 100000
+    }
+    // Mettre à jour la gamme de prix avec les vraies valeurs
+    priceRange.value = [range.minPrice || 0, range.maxPrice || 100000]
+  } catch (error) {
+    console.error('Erreur lors du chargement de la gamme de prix:', error)
   }
 }
 
@@ -319,20 +322,18 @@ const loadProducts = async () => {
       sortDir: 'desc'
     }
 
-    // Appliquer les filtres
-    if (filters.value.type) {
-      const data = await productStore.fetchProductsByType(filters.value.type, params)
-      totalPages.value = data.totalPages
-    } else if (filters.value.category) {
-      const data = await productStore.fetchProductsByCategory(filters.value.category, params)
-      totalPages.value = data.totalPages
-    } else if (filters.value.subCategory) {
-      const data = await productStore.fetchProductsBySubCategory(filters.value.subCategory, params)
-      totalPages.value = data.totalPages
-    } else {
-      const data = await productStore.fetchProducts(params)
-      totalPages.value = data.totalPages
-    }
+    // Mettre à jour les filtres dans le store avant de charger les produits
+    productStore.setFilters({
+      category: filters.value.category,
+      subCategory: filters.value.subCategory,
+      organic: filters.value.organic,
+      local: filters.value.local,
+      priceRange: priceRange.value
+    })
+
+    // Utiliser la méthode générale avec tous les filtres
+    const data = await productStore.fetchProducts(params)
+    totalPages.value = data.totalPages
   } catch (error) {
     console.error('Erreur lors du chargement des produits:', error)
   }
@@ -356,20 +357,22 @@ const applyFilters = async () => {
 }
 
 const updatePriceFilter = () => {
-  // Implémenter le filtre par prix si nécessaire
+  // Mettre à jour les filtres dans le store
+  productStore.setFilters({
+    priceRange: priceRange.value
+  })
   applyFilters()
 }
 
 const clearFilters = () => {
   filters.value = {
-    type: null,
     category: null,
     subCategory: null,
     organic: false,
     local: false,
     sortBy: 'createdAt'
   }
-  priceRange.value = [0, 10000]
+  priceRange.value = [priceRangeLimits.value.min, priceRangeLimits.value.max]
   searchQuery.value = ''
   currentPage.value = 0
   loadProducts()
@@ -378,6 +381,13 @@ const clearFilters = () => {
 const loadPage = (page) => {
   currentPage.value = page - 1
   loadProducts()
+}
+
+// Méthode pour afficher le modal d'authentification
+const showAuthModal = () => {
+  if (authModal.value) {
+    authModal.value.openModal()
+  }
 }
 
 // Watchers
@@ -390,6 +400,7 @@ watch(() => filters.value.category, (newCategory) => {
 // Initialisation
 onMounted(async () => {
   await loadCategories()
+  await loadPriceRange()
   
   // Vérifier les paramètres de l'URL
   if (route.query.category) {

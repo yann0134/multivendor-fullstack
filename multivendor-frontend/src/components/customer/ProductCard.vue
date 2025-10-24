@@ -125,7 +125,7 @@
         variant="flat" 
         block
         :disabled="!canAddToCart"
-        @click.stop="addToCart"
+        @click.stop="handleAddToCart"
       >
         <v-icon left>mdi-cart-plus</v-icon>
         {{ canAddToCart ? 'Ajouter au panier' : 'Indisponible' }}
@@ -146,6 +146,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const emit = defineEmits(['showAuthModal'])
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -184,6 +186,12 @@ const canAddToCart = computed(() => {
   return availableQuantity > 0 && props.product.active
 })
 
+// Vérifier si l'utilisateur est authentifié
+const isAuthenticated = computed(() => {
+  const token = localStorage.getItem('jwt_token')
+  return token && token !== 'null' && token.trim() !== ''
+})
+
 const stockColor = computed(() => {
   const availableQuantity = props.product.supplierAvailableQuantity || props.product.quantity || 0
   if (availableQuantity === 0) return 'red'
@@ -217,6 +225,20 @@ const handleImageError = (event) => {
   // L'image par défaut sera affichée via le template v-slot:error
 }
 
+// Gestion du clic sur le bouton "Ajouter au panier"
+const handleAddToCart = () => {
+  if (!canAddToCart.value) return
+  
+  // Si l'utilisateur n'est pas authentifié, afficher le modal
+  if (!isAuthenticated.value) {
+    emit('showAuthModal')
+    return
+  }
+  
+  // Sinon, procéder à l'ajout au panier
+  addToCart()
+}
+
 // Ajouter au panier
 const addToCart = async () => {
   if (!canAddToCart.value) return
@@ -235,6 +257,11 @@ const addToCart = async () => {
     await cartStore.addToCart(props.product, 1, options)
   } catch (error) {
     console.error('Erreur lors de l\'ajout au panier:', error)
+    
+    // Si l'erreur est liée à l'authentification, émettre un événement
+    if (error.message === 'AUTHENTICATION_REQUIRED') {
+      emit('showAuthModal')
+    }
   } finally {
     loading.value = false
   }

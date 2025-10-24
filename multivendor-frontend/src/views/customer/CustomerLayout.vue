@@ -51,12 +51,12 @@
           class="mb-1"
         />
         
-        <v-list-item 
+        <!--<v-list-item
           prepend-icon="mdi-account-group" 
           title="Nos Fermiers" 
           to="/customer/farmers"
           class="mb-1"
-        />
+        />-->
         
         <v-list-item 
           prepend-icon="mdi-cart" 
