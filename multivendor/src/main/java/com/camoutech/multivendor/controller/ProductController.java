@@ -27,6 +27,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.File;
+import java.io.IOException;
 
 import java.util.List;
 import java.util.Map;
@@ -54,6 +57,7 @@ public class ProductController {
      * Récupérer tous les produits avec pagination (pour les clients)
      */
     @GetMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<Page<Product>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
@@ -1098,6 +1102,32 @@ public class ProductController {
     }
 
     /**
+     * Récupérer le profil du fournisseur connecté
+     */
+    @GetMapping("/supplier/profile")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<Supplier> getSupplierProfile() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            
+            System.out.println("👤 Récupération du profil fournisseur: " + email);
+            
+            // Récupérer le fournisseur connecté
+            Supplier supplier = supplierRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé pour l'email: " + email));
+            
+            System.out.println("✅ Profil fournisseur récupéré: " + supplier.getSupplierName());
+            return ResponseEntity.ok(supplier);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération du profil fournisseur: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Mettre à jour le profil du fournisseur connecté
      */
     @PutMapping("/supplier/update-profile")
@@ -1662,6 +1692,123 @@ public class ProductController {
             
         } catch (Exception e) {
             System.err.println("❌ Erreur lors de la récupération des statistiques de performance: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Récupérer les images d'un produit spécifique
+     */
+    @GetMapping("/{productId}/images")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<List<ProductImage>> getProductImages(@PathVariable Long productId) {
+        try {
+            System.out.println("🖼️ Récupération des images pour le produit: " + productId);
+            
+            Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé avec l'ID: " + productId));
+            
+            System.out.println("📦 Produit trouvé: " + product.getTitle());
+            
+            List<ProductImage> images = product.getImages();
+            
+            System.out.println("🖼️ Images trouvées: " + images.size());
+            if (images.isEmpty()) {
+                System.out.println("⚠️ Aucune image trouvée pour ce produit");
+            } else {
+                // Construire des URLs complètes pour les images
+                for (ProductImage image : images) {
+                    String fullUrl = "http://localhost:3026" + image.getImageUrl();
+                    image.setImageUrl(fullUrl);
+                    System.out.println("  - Image: " + image.getImageName() + " (URL: " + image.getImageUrl() + ")");
+                }
+            }
+            
+            return ResponseEntity.ok(images);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des images: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Ajouter une image à un produit
+     */
+    @PostMapping("/{productId}/images")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<ProductImage> addProductImage(
+            @PathVariable Long productId,
+            @RequestParam("image") MultipartFile image) {
+        try {
+            System.out.println("📸 Ajout d'une image au produit: " + productId);
+            
+            Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé avec l'ID: " + productId));
+            
+            // Sauvegarder le fichier physiquement
+            String uploadDir = "C:\\Users\\ELITEBOOK 850 G6\\Desktop\\ecommerce1\\multivendor-fullstack\\multivendor\\src\\main\\resources\\uploads\\products\\";
+            File directory = new File(uploadDir);
+            if (!directory.exists()) {
+                directory.mkdirs();
+                System.out.println("📁 Répertoire créé: " + uploadDir);
+            }
+            
+            // Générer un nom de fichier unique
+            String originalFilename = image.getOriginalFilename();
+            String fileExtension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            
+            // Créer un nom unique avec timestamp et UUID
+            long timestamp = System.currentTimeMillis();
+            String uniqueId = java.util.UUID.randomUUID().toString().substring(0, 8);
+            String filename = "product_" + timestamp + "_" + uniqueId + fileExtension;
+            
+            // Créer une nouvelle image
+            ProductImage productImage = new ProductImage();
+            productImage.setImageName(filename); // Utiliser le nom unique généré
+            productImage.setImageType(image.getContentType());
+            productImage.setFileSize(image.getSize());
+            productImage.setProduct(product);
+            productImage.setAltText("Image du produit " + product.getTitle());
+            productImage.setDescription("Image uploadée pour " + product.getTitle());
+            
+            String relativeUrl = "/uploads/products/" + filename;
+            String filePath = uploadDir + filename;
+            
+            System.out.println("💾 Tentative de sauvegarde vers: " + filePath);
+            
+            // Sauvegarder le fichier
+            try {
+                image.transferTo(new File(filePath));
+                System.out.println("💾 Fichier sauvegardé: " + filePath);
+            } catch (IOException e) {
+                System.err.println("❌ Erreur lors de la sauvegarde du fichier: " + e.getMessage());
+                throw new RuntimeException("Erreur lors de la sauvegarde de l'image", e);
+            }
+            
+            productImage.setImageUrl(relativeUrl);
+            productImage.setWidth(800); // Valeur par défaut
+            productImage.setHeight(600); // Valeur par défaut
+            
+            // Ajouter l'image au produit
+            product.getImages().add(productImage);
+            productRepository.save(product);
+            
+            // Construire l'URL complète pour la réponse
+            String fullUrl = "http://localhost:3026" + relativeUrl;
+            productImage.setImageUrl(fullUrl);
+            
+            System.out.println("✅ Image ajoutée avec succès: " + productImage.getImageName());
+            
+            return ResponseEntity.ok(productImage);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de l'ajout de l'image: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

@@ -7,6 +7,11 @@
           :images="productImages"
           :product-name="product.title"
         />
+        
+        <!-- Debug: Afficher le nombre d'images -->
+        <div v-if="productImages.length > 0" class="text-caption text-grey">
+          {{ productImages.length }} image(s) chargée(s)
+        </div>
       </v-col>
       
       <v-col cols="12" md="6">
@@ -279,7 +284,7 @@
       </v-col>
     </v-row>
 
-
+    
     <!-- Avis et commentaires -->
     <v-row class="mt-8">
       <v-col cols="12">
@@ -319,8 +324,8 @@
           </v-card-text>
         </v-card>
       </v-col>
-     </v-row>
-     
+    </v-row>
+    
     
   </v-container>
   
@@ -357,6 +362,7 @@ const cartStore = useCartStore()
 const reviewStore = useReviewStore()
 
 const product = ref(null)
+const productImages = ref([])
 const loading = ref(false)
 const quantity = ref(1)
 const selectedVariety = ref('')
@@ -394,21 +400,6 @@ const packagingOptions = computed(() => {
   return [unit]
 })
 
-// Images du produit pour la galerie
-const productImages = computed(() => {
-  if (!product.value?.images) return []
-  
-  return product.value.images.map((image, index) => ({
-    id: image.id || index,
-    url: image.imageUrl || image.url || image,
-    thumbnailUrl: image.thumbnailUrl || image.imageUrl || image.url || image,
-    altText: image.altText || `${product.value.title} - Image ${index + 1}`,
-    description: image.description || '',
-    width: image.width || 800,
-    height: image.height || 600,
-    isMain: image.isMain || index === 0
-  }))
-})
 
 const addToCart = async () => {
   loading.value = true
@@ -475,6 +466,24 @@ onMounted(async () => {
   const productId = route.params.id
   try {
     product.value = await productStore.fetchProductById(productId)
+    console.log('📦 Produit chargé:', product.value)
+    
+    // Utiliser les images directement du produit (comme dans l'interface fournisseur)
+    if (product.value && product.value.images) {
+      // Construire des URLs complètes pour les images
+      const imagesWithFullUrls = product.value.images.map(image => ({
+        ...image,
+        imageUrl: image.imageUrl.startsWith('http') 
+          ? image.imageUrl 
+          : `http://localhost:3026${image.imageUrl}`
+      }))
+      productImages.value = imagesWithFullUrls
+      console.log('🖼️ Images du produit avec URLs complètes:', productImages.value)
+    } else {
+      console.log('⚠️ Aucune image trouvée dans le produit')
+      productImages.value = []
+    }
+    
     // Charger les avis
     await reviewStore.fetchProductReviews(productId)
   } catch (error) {

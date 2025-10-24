@@ -41,20 +41,20 @@
     <section class="categories-section">
       <v-container>
         <h2 class="section-title text-center mb-8">🌾 Nos Catégories de Produits</h2>
-        <v-row>
+        <v-row v-if="categories.length > 0">
           <v-col cols="12" md="6" v-for="category in categories" :key="category.id">
             <v-card 
               class="category-card pa-6" 
-              :style="{ borderLeft: `6px solid ${category.color}` }"
+              :style="{ borderLeft: `6px solid ${category.color || '#4CAF50'}` }"
               @click="goToCategory(category)"
               hover
             >
               <div class="d-flex align-center">
-                <v-icon :color="category.color" size="64" class="mr-6">{{ category.icon }}</v-icon>
+                <v-icon :color="category.color || '#4CAF50'" size="64" class="mr-6">{{ category.icon || 'mdi-leaf' }}</v-icon>
                 <div>
                   <h3 class="text-h5 mb-2">{{ category.name }}</h3>
-                  <p class="text-body-1 text-grey">{{ category.description }}</p>
-                  <v-chip :color="category.color" variant="tonal" class="mt-2">
+                  <p class="text-body-1 text-grey">{{ category.description || 'Découvrez nos produits de qualité' }}</p>
+                  <v-chip :color="category.color || '#4CAF50'" variant="tonal" class="mt-2">
                     {{ getCategoryCount(category) }} produits
                   </v-chip>
                 </div>
@@ -62,6 +62,10 @@
             </v-card>
           </v-col>
         </v-row>
+        <div v-else class="text-center py-8">
+          <v-progress-circular indeterminate color="primary" size="64" />
+          <p class="mt-4">Chargement des catégories...</p>
+        </div>
       </v-container>
     </section>
 
@@ -90,6 +94,10 @@
             <ProductCard :product="product" />
           </v-col>
         </v-row>
+        <div v-else class="text-center py-8">
+          <v-progress-circular indeterminate color="primary" size="64" />
+          <p class="mt-4">Chargement des nouveaux produits...</p>
+        </div>
       </v-container>
     </section>
 
@@ -188,28 +196,39 @@ const stats = ref([
 // Méthodes
 const loadCategories = async () => {
   try {
+    console.log('🏷️ Chargement des catégories...')
     const response = await fetch('http://localhost:3026/api/categories')
     categories.value = await response.json()
+    console.log('🏷️ Catégories chargées:', categories.value.length)
   } catch (error) {
     console.error('Erreur lors du chargement des catégories:', error)
+    categories.value = []
   }
 }
 
 const loadFeaturedProducts = async () => {
   try {
-    const response = await fetch('http://localhost:3026/api/products/featured')
-    featuredProducts.value = await response.json()
+    // Utiliser l'endpoint existant pour récupérer les produits
+    const response = await fetch('http://localhost:3026/api/products?page=0&size=6&status=RECEIVED_BY_WAREHOUSE')
+    const data = await response.json()
+    featuredProducts.value = data.content || data || []
+    console.log('🛒 Produits vedette chargés:', featuredProducts.value.length)
   } catch (error) {
     console.error('Erreur lors du chargement des produits vedette:', error)
+    featuredProducts.value = []
   }
 }
 
 const loadNewProducts = async () => {
   try {
-    const response = await fetch('http://localhost:3026/api/products/new')
-    newProducts.value = await response.json()
+    // Utiliser l'endpoint existant pour récupérer les produits
+    const response = await fetch('http://localhost:3026/api/products?page=0&size=6&status=RECEIVED_BY_WAREHOUSE&sortBy=createdAt&sortDir=desc')
+    const data = await response.json()
+    newProducts.value = data.content || data || []
+    console.log('🆕 Nouveaux produits chargés:', newProducts.value.length)
   } catch (error) {
     console.error('Erreur lors du chargement des nouveaux produits:', error)
+    newProducts.value = []
   }
 }
 

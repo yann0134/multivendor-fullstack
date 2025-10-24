@@ -9,8 +9,6 @@ package com.camoutech.multivendor.request;
 
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 public class CreateProductRequest {
     private String title;
@@ -21,7 +19,6 @@ public class CreateProductRequest {
     private int supplierAvailableQuantity = 0; // Quantité disponible chez le fournisseur
     private int adminRequestedQuantity = 0; // Quantité demandée par l'admin
     private String color;
-    private List<String> images;
     private String category;
     private String category2;
     private String category3;

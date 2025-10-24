@@ -12,6 +12,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -82,6 +83,7 @@ public class Product {
 
     // Images du produit
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private List<ProductImage> images = new ArrayList<>();
 
     // Relations
@@ -154,6 +156,7 @@ public class Product {
     private String reviewedBy; // Email de l'administrateur qui a validé/rejeté
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Review> reviews = new ArrayList<>();
     
     // Méthodes utilitaires

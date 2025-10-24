@@ -10,7 +10,17 @@
             height="80"
             width="80"
             class="rounded"
-          />
+            @error="handleImageError"
+          >
+            <template v-slot:error>
+              <div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+                <div class="text-center">
+                  <v-icon size="32" color="grey">mdi-image-off</v-icon>
+                  <div class="text-caption text-grey mt-1">Image non disponible</div>
+                </div>
+              </div>
+            </template>
+          </v-img>
         </v-col>
         
         <!-- Informations du produit -->
@@ -177,10 +187,31 @@ watch(() => props.item.quantity, (newValue) => {
 })
 
 const getProductImage = (product) => {
+  console.log('🖼️ CartItem - Produit:', product.title)
+  console.log('🖼️ CartItem - Images:', product.images)
+  
   if (product?.images && product.images.length > 0) {
-    return product.images[0].imageUrl || product.images[0].url || product.images[0]
+    const firstImage = product.images[0]
+    console.log('🖼️ CartItem - Première image:', firstImage)
+    
+    // Construire l'URL complète si nécessaire
+    if (firstImage.imageUrl && !firstImage.imageUrl.startsWith('http')) {
+      const fullUrl = `http://localhost:3026${firstImage.imageUrl}`
+      console.log('🖼️ CartItem - URL complète construite:', fullUrl)
+      return fullUrl
+    }
+    const finalUrl = firstImage.imageUrl || firstImage.url || getDefaultProductImage(product)
+    console.log('🖼️ CartItem - URL finale:', finalUrl)
+    return finalUrl
   }
+  
+  console.log('🖼️ CartItem - Aucune image, utilisation de l\'image par défaut')
   return getDefaultProductImage(product)
+}
+
+const handleImageError = (event) => {
+  console.error('❌ Erreur de chargement de l\'image du produit dans le panier:', event.target.src)
+  // L'image par défaut sera affichée via le template v-slot:error
 }
 
 // Règles de validation pour la quantité

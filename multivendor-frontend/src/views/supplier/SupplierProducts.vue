@@ -391,8 +391,7 @@ const goToAddProduct = () => {
 }
 
 const viewProductDetails = (product) => {
-  selectedProduct.value = product
-  detailsDialog.value = true
+  router.push(`/supplier/products/${product.id}`)
 }
 
 const editProduct = (product) => {

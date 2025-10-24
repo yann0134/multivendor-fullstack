@@ -7,7 +7,7 @@
 
 package com.camoutech.multivendor.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,7 +35,7 @@ public class Review {
     @ElementCollection
     private List<String> productImages;
 
-    @JsonIgnore
+    @JsonBackReference
     @ManyToOne
     private Product product;
 

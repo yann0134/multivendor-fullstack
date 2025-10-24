@@ -31,6 +31,7 @@ public class CategoryController {
      * Récupérer toutes les catégories actives
      */
     @GetMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<List<ProductCategory>> getAllCategories() {
         List<ProductCategory> categories = categoryRepository.findAllActiveOrderByName();
         return ResponseEntity.ok(categories);

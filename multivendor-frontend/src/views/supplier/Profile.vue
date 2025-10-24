@@ -231,13 +231,34 @@ const loadProfile = async () => {
   try {
     console.log('👤 Chargement du profil fournisseur...')
     
-    // Ici vous pouvez ajouter un endpoint pour récupérer le profil
-    // const response = await api.get('/api/supplier/profile')
-    // profileData.value = response.data
+    // Récupérer le profil fournisseur
+    const response = await api.get('/api/products/supplier/profile')
+    console.log('📊 Réponse API:', response.data)
     
-    console.log('✅ Profil chargé')
+    // Mapper les données reçues vers le format attendu
+    const supplier = response.data
+    profileData.value = {
+      supplierName: supplier.supplierName || '',
+      mobile: supplier.mobile || '',
+      pickupAddress: {
+        address: supplier.pickupAddress?.address || '',
+        city: supplier.pickupAddress?.city || '',
+        state: supplier.pickupAddress?.state || '',
+        pinCode: supplier.pickupAddress?.pinCode || ''
+      },
+      businessDetails: {
+        businessName: supplier.businessDetails?.businessName || '',
+        businessAddress: supplier.businessDetails?.businessAddress || '',
+        businessEmail: supplier.businessDetails?.businessEmail || '',
+        businessMobile: supplier.businessDetails?.businessMobile || ''
+      }
+    }
+    
+    console.log('✅ Profil chargé:', profileData.value)
   } catch (error) {
     console.error('❌ Erreur lors du chargement du profil:', error)
+    errorMessage.value = error.response?.data?.message || 'Erreur lors du chargement du profil'
+    showError.value = true
   }
 }
 

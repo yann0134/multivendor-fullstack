@@ -34,21 +34,35 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<Cart> findUserCartHandler(
-            @RequestHeader("Authorization") String jwt) throws Exception {
+            @RequestHeader(value = "Authorization", required = false) String jwt) throws Exception {
+        // Si pas de token, retourner un panier vide
+        if (jwt == null || jwt.isEmpty()) {
+            Cart emptyCart = new Cart();
+            return new ResponseEntity<Cart>(emptyCart, HttpStatus.OK);
+        }
+        
         User user = userService.findUserByJwtToken(jwt);
-
         Cart cart = cartService.findUserCart(user);
-
         return new ResponseEntity<Cart>(cart, HttpStatus.OK);
     }
 
     @PutMapping("/add")
     public ResponseEntity<CartItem> addItemToCart(@RequestBody AddItemRequest req,
-                                                  @RequestHeader("Authorization") String jwt) throws Exception {
-        User user = userService.findUserByJwtToken(jwt);
+                                                  @RequestHeader(value = "Authorization", required = false) String jwt) throws Exception {
+        // Créer un utilisateur temporaire pour les utilisateurs non authentifiés
+        User user;
+        if (jwt == null || jwt.isEmpty()) {
+            // Créer un utilisateur temporaire ou utiliser un utilisateur par défaut
+            user = new User();
+            user.setId(0L); // ID temporaire pour les utilisateurs non authentifiés
+            user.setEmail("guest@temporary.com");
+            user.setFullName("Guest User");
+        } else {
+            user = userService.findUserByJwtToken(jwt);
+        }
+        
         Product product = productService.findProductById(req.getProductId());
-
-        CartItem item = cartService.addCartItem(user,product, req.getSize(), req.getQuantity());
+        CartItem item = cartService.addCartItem(user, product, req.getSize(), req.getQuantity());
 
         ApiResponse res = new ApiResponse();
         res.setMessage("Item Added To Cart Successfully");
@@ -59,8 +73,15 @@ public class CartController {
     @DeleteMapping("/item/{cartItemId}")
     public ResponseEntity<ApiResponse> deleteCartItemHandler(
             @PathVariable Long cartItemId,
-            @RequestHeader("Authorization") String jwt) throws Exception {
-        User user = userService.findUserByJwtToken(jwt);
+            @RequestHeader(value = "Authorization", required = false) String jwt) throws Exception {
+        User user;
+        if (jwt == null || jwt.isEmpty()) {
+            user = new User();
+            user.setId(0L);
+        } else {
+            user = userService.findUserByJwtToken(jwt);
+        }
+        
         cartItemService.removeCartItem(user.getId(), cartItemId);
 
         ApiResponse res = new ApiResponse();
@@ -72,9 +93,15 @@ public class CartController {
     public ResponseEntity<CartItem> updateCartItemHandler(
             @PathVariable Long cartItemId,
             @RequestBody CartItem cartItem,
-            @RequestHeader("Authorization") String jwt) throws Exception {
+            @RequestHeader(value = "Authorization", required = false) String jwt) throws Exception {
 
-        User user = userService.findUserByJwtToken(jwt);
+        User user;
+        if (jwt == null || jwt.isEmpty()) {
+            user = new User();
+            user.setId(0L);
+        } else {
+            user = userService.findUserByJwtToken(jwt);
+        }
 
         CartItem updatedCartItem = null;
         if (cartItem.getQuantity()>0){

@@ -213,6 +213,15 @@
         
         <v-card-text>
           <v-row>
+            <!-- Galerie d'images -->
+            <v-col cols="12" md="6">
+              <h3 class="text-h6 mb-4">🖼️ Images du Produit</h3>
+              <ProductImageGallery 
+                :images="productImages" 
+                :show-delete-buttons="false"
+              />
+            </v-col>
+            
             <!-- Informations du produit -->
             <v-col cols="12" md="6">
               <h3 class="text-h6 mb-4">Informations Produit</h3>
@@ -401,6 +410,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
+import ProductImageGallery from '@/components/supplier/ProductImageGallery.vue'
+import { getProductImages } from '@/services/productImages'
 
 const router = useRouter()
 
@@ -411,6 +422,7 @@ const processingReceptions = ref([])
 const showReceptionModal = ref(false)
 const showDetailsModal = ref(false)
 const selectedProduct = ref(null)
+const productImages = ref([])
 
 // Statistiques
 const stats = ref({
@@ -746,10 +758,25 @@ const confirmReceptionAction = async () => {
   }
 }
 
-const viewProductDetails = (product) => {
+// Fonction pour charger les images du produit
+const fetchProductImages = async (productId) => {
+  try {
+    const images = await getProductImages(productId)
+    productImages.value = images
+    console.log('🖼️ Images chargées pour le produit:', images.length)
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement des images:', error)
+    productImages.value = []
+  }
+}
+
+const viewProductDetails = async (product) => {
   console.log('📦 Affichage des détails du produit:', product)
   selectedProduct.value = product
   showDetailsModal.value = true
+  
+  // Charger les images du produit
+  await fetchProductImages(product.id)
 }
 
 const closeDetailsModal = () => {

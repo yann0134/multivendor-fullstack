@@ -9,6 +9,7 @@ package com.camoutech.multivendor.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 @Getter
@@ -49,6 +50,7 @@ public class ProductImage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
+    @JsonBackReference
     private Product product;
 
     @Column(nullable = false)

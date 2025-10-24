@@ -81,19 +81,21 @@
         </v-list-subheader>
         
         <v-list-item 
+          v-if="authStore.isAuthenticated"
           prepend-icon="mdi-clipboard-list" 
           title="Mes Commandes" 
           to="/customer/orders"
           class="mb-1"
         />
         
-        <v-divider class="my-2"></v-divider>
+        <v-divider v-if="authStore.isAuthenticated" class="my-2"></v-divider>
         
-        <v-list-subheader class="text-primary font-weight-bold">
+        <v-list-subheader v-if="authStore.isAuthenticated" class="text-primary font-weight-bold">
           👤 Mon Compte
         </v-list-subheader>
         
         <v-list-item 
+          v-if="authStore.isAuthenticated"
           prepend-icon="mdi-account" 
           title="Mon Profil" 
           to="/customer/profile"
@@ -101,6 +103,23 @@
         />
         
         <v-list-item 
+          v-if="!authStore.isAuthenticated"
+          prepend-icon="mdi-login" 
+          title="Se connecter" 
+          to="/login"
+          class="mb-1"
+        />
+        
+        <v-list-item 
+          v-if="!authStore.isAuthenticated"
+          prepend-icon="mdi-account-plus" 
+          title="S'inscrire" 
+          to="/register"
+          class="mb-1"
+        />
+        
+        <v-list-item 
+          v-if="authStore.isAuthenticated"
           prepend-icon="mdi-logout" 
           title="Déconnexion" 
           @click="logout"
@@ -156,7 +175,7 @@
       </v-btn>
       
       <!-- Menu utilisateur -->
-      <v-menu>
+      <v-menu v-if="authStore.isAuthenticated">
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props">
             <v-avatar size="32" color="white">
@@ -178,6 +197,24 @@
           </v-list-item>
         </v-list>
       </v-menu>
+      
+      <!-- Boutons de connexion/inscription pour les utilisateurs non authentifiés -->
+      <template v-else>
+        <v-btn 
+          color="white" 
+          variant="outlined" 
+          to="/login"
+          class="mr-2"
+        >
+          Se connecter
+        </v-btn>
+        <v-btn 
+          color="white" 
+          to="/register"
+        >
+          S'inscrire
+        </v-btn>
+      </template>
     </v-app-bar>
 
     <!-- Contenu principal -->

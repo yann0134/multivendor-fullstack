@@ -10,8 +10,8 @@
     </v-row>
 
     <!-- Statistiques rapides -->
-    <v-row class="mb-6">
-      <v-col cols="12" md="4">
+    <v-row class="mb-12">
+      <v-col cols="6" md="6">
         <v-card color="green" dark class="text-center pa-4">
           <v-icon size="48" class="mb-2">mdi-check-circle</v-icon>
           <h3 class="text-h6">Produits Reçus</h3>
@@ -19,15 +19,15 @@
         </v-card>
       </v-col>
       
-      <v-col cols="12" md="4">
+      <!--<v-col cols="12" md="4">
         <v-card color="blue" dark class="text-center pa-4">
           <v-icon size="48" class="mb-2">mdi-package-variant</v-icon>
-          <h3 class="text-h6">Stock Total</h3>
+          <h3 class="text-h6">Types de Produits</h3>
           <p class="text-h4">{{ stats.totalStock }}</p>
         </v-card>
-      </v-col>
+      </v-col>-->
       
-      <v-col cols="12" md="4">
+      <v-col cols="6" md="6">
         <v-card color="orange" dark class="text-center pa-4">
           <v-icon size="48" class="mb-2">mdi-currency-usd</v-icon>
           <h3 class="text-h6">Valeur Totale</h3>
@@ -57,6 +57,29 @@
               :loading="loading"
               class="elevation-1"
             >
+              <!-- En-têtes personnalisés avec icônes et tooltips -->
+              <template v-slot:headers="{ columns }">
+                <tr>
+                  <th v-for="column in columns" :key="column.key" class="text-center">
+                    <div class="d-flex align-center justify-center">
+                      <v-tooltip bottom>
+                        <template v-slot:activator="{ props }">
+                          <v-icon 
+                            v-bind="props"
+                            :color="column.sortable ? 'primary' : 'grey'"
+                            size="small"
+                            class="mr-2"
+                          >
+                            {{ column.icon }}
+                          </v-icon>
+                        </template>
+                        <span>{{ column.tooltip }}</span>
+                      </v-tooltip>
+                      <span class="font-weight-bold">{{ column.text }}</span>
+                    </div>
+                  </th>
+                </tr>
+              </template>
               <!-- Image du produit -->
               <template v-slot:item.image="{ item }">
                 <v-avatar size="50" class="mr-3">
@@ -100,7 +123,7 @@
               <!-- Prix -->
               <template v-slot:item.price="{ item }">
                 <div class="text-right">
-                  <div class="font-weight-bold">{{ formatPrice(item.supplierPrice) }}</div>
+                  <div class="font-weight-bold">{{ formatPrice(item.sellingPrice) }}</div>
                   <div class="text-caption">par {{ getQuantityType(item) }}</div>
                 </div>
               </template>
@@ -165,6 +188,15 @@
         
         <v-card-text>
           <v-row>
+            <!-- Galerie d'images -->
+            <v-col cols="12" md="6">
+              <h3 class="text-h6 mb-4">🖼️ Images du Produit</h3>
+              <ProductImageGallery 
+                :images="productImages" 
+                :show-delete-buttons="false"
+              />
+            </v-col>
+            
             <!-- Informations du produit -->
             <v-col cols="12" md="6">
               <h3 class="text-h6 mb-4">Informations Produit</h3>
@@ -211,8 +243,18 @@
                 </v-list-item>
                 
                 <v-list-item>
-                  <v-list-item-title>Prix Unitaire</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedProduct.supplierPrice?.toLocaleString() || 'N/A' }}  FCFA</v-list-item-subtitle>
+                  <v-list-item-title>Prix de Vente</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatPrice(selectedProduct.sellingPrice) }}</v-list-item-subtitle>
+                </v-list-item>
+                
+                <v-list-item v-if="selectedProduct.mrpPrice && selectedProduct.mrpPrice > selectedProduct.sellingPrice">
+                  <v-list-item-title>Prix MRP</v-list-item-title>
+                  <v-list-item-subtitle class="text-decoration-line-through">{{ formatPrice(selectedProduct.mrpPrice) }}</v-list-item-subtitle>
+                </v-list-item>
+                
+                <v-list-item v-if="selectedProduct.supplierPrice">
+                  <v-list-item-title>Prix Fournisseur</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatPrice(selectedProduct.supplierPrice) }}</v-list-item-subtitle>
                 </v-list-item>
                 
                 <v-list-item>
@@ -302,12 +344,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import api from '@/services/api'
+import ProductImageGallery from '@/components/supplier/ProductImageGallery.vue'
+import { getProductImages } from '@/services/productImages'
 
 // Variables réactives
 const inventory = ref([])
 const loading = ref(false)
 const showDetailsModal = ref(false)
 const selectedProduct = ref(null)
+const productImages = ref([])
 
 // Statistiques
 const stats = ref({
@@ -316,17 +361,73 @@ const stats = ref({
   totalValue: 0
 })
 
-// En-têtes du tableau
+// En-têtes du tableau avec icônes et tooltips
 const headers = [
-  { text: 'Image', value: 'image', sortable: false, width: '80px' },
-  { text: 'Produit', value: 'productInfo', sortable: true },
-  { text: 'Fournisseur', value: 'supplier', sortable: true },
-  { text: 'Quantité', value: 'quantity', sortable: true },
-  { text: 'Prix', value: 'price', sortable: true },
-  { text: 'Statuts', value: 'status', sortable: false },
-  { text: 'Livré le', value: 'deliveryDate', sortable: true },
-  { text: 'Reçu le', value: 'receivedAt', sortable: true },
-  { text: 'Actions', value: 'actions', sortable: false, width: '120px' }
+  { 
+    text: 'Image', 
+    value: 'image', 
+    sortable: false, 
+    width: '80px',
+    icon: 'mdi-image',
+    tooltip: 'Photo du produit'
+  },
+  { 
+    text: 'Produit', 
+    value: 'productInfo', 
+    sortable: true,
+    icon: 'mdi-package-variant',
+    tooltip: 'Nom, description et catégorie du produit'
+  },
+  { 
+    text: 'Fournisseur', 
+    value: 'supplier', 
+    sortable: true,
+    icon: 'mdi-account',
+    tooltip: 'Nom et localisation du fournisseur'
+  },
+  { 
+    text: 'Quantité', 
+    value: 'quantity', 
+    sortable: true,
+    icon: 'mdi-scale',
+    tooltip: 'Stock disponible en entrepôt'
+  },
+  { 
+    text: 'Prix', 
+    value: 'price', 
+    sortable: true,
+    icon: 'mdi-currency-usd',
+    tooltip: 'Prix de vente unitaire'
+  },
+  { 
+    text: 'Statuts', 
+    value: 'status', 
+    sortable: false,
+    icon: 'mdi-information',
+    tooltip: 'Statut du produit et de la réception'
+  },
+  { 
+    text: 'Livré le', 
+    value: 'deliveryDate', 
+    sortable: true,
+    icon: 'mdi-truck-delivery',
+    tooltip: 'Date d\'expédition par le fournisseur'
+  },
+  { 
+    text: 'Reçu le', 
+    value: 'receivedAt', 
+    sortable: true,
+    icon: 'mdi-check-circle',
+    tooltip: 'Date de réception en entrepôt'
+  },
+  { 
+    text: 'Actions', 
+    value: 'actions', 
+    sortable: false, 
+    width: '120px',
+    icon: 'mdi-cog',
+    tooltip: 'Actions disponibles'
+  }
 ]
 
 // Fonctions de récupération des données
@@ -351,13 +452,11 @@ const fetchInventory = async () => {
 }
 
 const updateStats = () => {
-  stats.value.totalReceived = inventory.value.length
-  stats.value.totalStock = inventory.value.reduce((total, product) => {
-    return total + (getDisplayQuantity(product) || 0)
-  }, 0)
+  stats.value.totalReceived = inventory.value.length  // Nombre de types de produits reçus
+  stats.value.totalStock = inventory.value.length     // Nombre de types de produits en stock (par type, pas par quantité)
   stats.value.totalValue = inventory.value.reduce((total, product) => {
     const quantity = getDisplayQuantity(product) || 0
-    const price = product.supplierPrice || 0
+    const price = product.sellingPrice || 0  // Utiliser le prix de vente au lieu du prix fournisseur
     return total + (quantity * price)
   }, 0)
 }
@@ -509,11 +608,26 @@ const getReceptionStatusText = (status) => {
   return texts[status] || status
 }
 
+// Fonction pour charger les images du produit
+const fetchProductImages = async (productId) => {
+  try {
+    const images = await getProductImages(productId)
+    productImages.value = images
+    console.log('🖼️ Images chargées pour le produit:', images.length)
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement des images:', error)
+    productImages.value = []
+  }
+}
+
 // Fonctions de gestion des modals
-const viewProductDetails = (product) => {
+const viewProductDetails = async (product) => {
   console.log('📦 Affichage des détails du produit:', product)
   selectedProduct.value = product
   showDetailsModal.value = true
+  
+  // Charger les images du produit
+  await fetchProductImages(product.id)
 }
 
 const closeDetailsModal = () => {
@@ -529,3 +643,61 @@ onMounted(() => {
   fetchInventory()
 })
 </script>
+
+<style scoped>
+/* Styles pour les en-têtes du tableau */
+.v-data-table :deep(.v-data-table__wrapper) table thead tr th {
+  background-color: #f5f5f5;
+  border-bottom: 2px solid #e0e0e0;
+  padding: 12px 8px;
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.v-data-table :deep(.v-data-table__wrapper) table thead tr th:hover {
+  background-color: #e3f2fd;
+}
+
+/* Styles pour les icônes dans les en-têtes */
+.v-data-table :deep(.v-data-table__wrapper) table thead tr th .v-icon {
+  transition: all 0.3s ease;
+}
+
+.v-data-table :deep(.v-data-table__wrapper) table thead tr th .v-icon:hover {
+  transform: scale(1.1);
+  color: #1976d2 !important;
+}
+
+/* Styles pour les tooltips */
+.v-tooltip :deep(.v-tooltip__content) {
+  background-color: #424242;
+  color: white;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Styles pour les cellules du tableau */
+.v-data-table :deep(.v-data-table__wrapper) table tbody tr td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.v-data-table :deep(.v-data-table__wrapper) table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Styles pour les cartes */
+.v-card {
+  margin-bottom: 20px;
+}
+
+.v-chip {
+  margin: 2px;
+}
+
+.v-dialog {
+  max-width: 600px;
+}
+</style>

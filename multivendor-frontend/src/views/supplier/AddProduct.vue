@@ -382,6 +382,7 @@ import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { createProduct } from '@/services/products'
 import { getAllCategories, getSubCategoriesByCategoryName } from '@/services/categories'
 import { useRouter } from 'vue-router'
+import api from '@/services/api'
 
 const router = useRouter()
 
@@ -458,6 +459,34 @@ const handleImageUpload = (files) => {
 const removeImage = (index) => {
   imagePreviews.value.splice(index, 1)
   imageFiles.value.splice(index, 1)
+}
+
+// Fonction pour uploader les images d'un produit
+const uploadProductImages = async (productId, files) => {
+  try {
+    console.log('📤 Upload des images:', files.length, 'fichiers pour le produit', productId)
+    
+    // Uploader chaque image individuellement
+    const uploadPromises = files.map(async (file) => {
+      const formData = new FormData()
+      formData.append('image', file)
+      
+      const response = await api.post(`/api/products/${productId}/images`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      return response.data
+    })
+    
+    const results = await Promise.all(uploadPromises)
+    console.log('✅ Toutes les images uploadées:', results)
+    return results
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'upload des images:', error)
+    throw error
+  }
 }
 
 // Charger les catégories
@@ -564,17 +593,26 @@ const confirmSubmission = async () => {
   console.log('🚀 Confirmation de soumission')
   submitting.value = true
   try {
-    // Préparer les données pour l'API
+    // 1. Créer le produit SANS images
     const productData = {
-      ...formData,
-      images: imagePreviews.value
+      ...formData
+      // Ne pas inclure les images ici
     }
     
-    console.log('📤 Données envoyées à l\'API:', productData)
+    console.log('📤 Données du produit envoyées à l\'API:', productData)
 
-    await createProduct(productData)
+    const productResponse = await createProduct(productData)
+    const productId = productResponse.data.id
     
-    console.log('✅ Produit créé avec succès')
+    console.log('✅ Produit créé avec succès, ID:', productId)
+    
+    // 2. Uploader les images séparément si elles existent
+    if (imageFiles.value && imageFiles.value.length > 0) {
+      console.log('📸 Upload des images pour le produit:', productId)
+      await uploadProductImages(productId, imageFiles.value)
+      console.log('✅ Images uploadées avec succès')
+    }
+    
     // Rediriger vers la liste des produits
     router.push('/supplier/products')
     

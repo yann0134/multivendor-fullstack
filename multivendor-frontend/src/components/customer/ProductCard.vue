@@ -9,7 +9,17 @@
       height="200"
       cover
       class="product-image"
+      @error="handleImageError"
     >
+      <template v-slot:error>
+        <div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+          <div class="text-center">
+            <v-icon size="48" color="grey">mdi-image-off</v-icon>
+            <div class="text-caption text-grey mt-2">Image non disponible</div>
+          </div>
+        </div>
+      </template>
+      
       <!-- Badges pour produits spéciaux -->
       <div class="product-badges">
         <v-chip 
@@ -144,10 +154,25 @@ const loading = ref(false)
 
 // Image par défaut si pas d'image
 const productImage = computed(() => {
+  console.log('🖼️ ProductCard - Produit:', props.product.title)
+  console.log('🖼️ ProductCard - Images:', props.product.images)
+  
   if (props.product.images && props.product.images.length > 0) {
-    return props.product.images[0]
+    const firstImage = props.product.images[0]
+    console.log('🖼️ ProductCard - Première image:', firstImage)
+    
+    // Construire l'URL complète si nécessaire
+    if (firstImage.imageUrl && !firstImage.imageUrl.startsWith('http')) {
+      const fullUrl = `http://localhost:3026${firstImage.imageUrl}`
+      console.log('🖼️ ProductCard - URL complète construite:', fullUrl)
+      return fullUrl
+    }
+    const finalUrl = firstImage.imageUrl || firstImage.url || getDefaultProductImage(props.product)
+    console.log('🖼️ ProductCard - URL finale:', finalUrl)
+    return finalUrl
   }
   
+  console.log('🖼️ ProductCard - Aucune image, utilisation de l\'image par défaut')
   // Utiliser la fonction configurée pour obtenir une image par défaut
   return getDefaultProductImage(props.product)
 })
@@ -185,6 +210,11 @@ const formatPrice = (price) => {
 // Navigation vers le détail du produit
 const goToProduct = () => {
   router.push(`/customer/product/${props.product.id}`)
+}
+
+const handleImageError = (event) => {
+  console.error('❌ Erreur de chargement de l\'image du produit:', event.target.src)
+  // L'image par défaut sera affichée via le template v-slot:error
 }
 
 // Ajouter au panier

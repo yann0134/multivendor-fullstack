@@ -43,6 +43,7 @@ import SupplierOrders from '@/views/supplier/Orders.vue'
 import SupplierProfile from '@/views/supplier/Profile.vue'
 import SupplierCollection from '@/views/supplier/Collection.vue'
 import SupplierCollectionDetail from '@/views/supplier/CollectionDetail.vue'
+import SupplierProductDetail from '@/views/supplier/ProductDetail.vue'
 
 // Vues livreur/agent
 import DeliveryDashboard from '@/views/delivery/Dashboard.vue'
@@ -69,6 +70,10 @@ const routes = [
   // Routes publiques
   {
     path: '/',
+    redirect: '/customer'
+  },
+  {
+    path: '/home',
     name: 'Home',
     component: Home
   },
@@ -87,7 +92,7 @@ const routes = [
   {
     path: '/customer',
     component: CustomerLayout,
-    meta: { requiresAuth: true, role: 'ROLE_CUSTOMER' },
+    meta: { requiresAuth: false },
     children: [
       {
         path: '',
@@ -201,6 +206,11 @@ const routes = [
         path: 'products/edit/:id',
         name: 'SupplierEditProduct',
         component: SupplierEditProduct
+      },
+      {
+        path: 'products/:id',
+        name: 'SupplierProductDetail',
+        component: SupplierProductDetail
       },
       {
         path: 'orders',
@@ -374,6 +384,12 @@ router.beforeEach((to, from, next) => {
     // Rediriger vers le dashboard approprié selon le rôle
     const dashboardRoute = authStore.getDashboardRoute(authStore.user?.role)
     next(dashboardRoute)
+    return
+  }
+  
+  // Permettre l'accès à /customer sans authentification
+  if (to.path.startsWith('/customer')) {
+    next()
     return
   }
   

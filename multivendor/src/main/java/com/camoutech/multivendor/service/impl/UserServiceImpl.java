@@ -36,4 +36,14 @@ public class UserServiceImpl implements UserService {
         }
         return user;
     }
+
+    @Override
+    public User updateUser(User user) throws Exception {
+        try {
+            User updatedUser = userRepository.save(user);
+            return updatedUser;
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la mise à jour de l'utilisateur: " + e.getMessage());
+        }
+    }
 }

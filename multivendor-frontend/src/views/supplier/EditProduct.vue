@@ -36,6 +36,43 @@
           <v-form ref="form" v-model="valid" @submit.prevent="updateProduct">
             <v-card-text>
               <v-row>
+                <!-- Galerie d'images -->
+                <v-col cols="12" md="6">
+                  <v-card class="mb-4">
+                    <v-card-title class="d-flex align-center">
+                      <v-icon class="mr-2" color="primary">mdi-image-multiple</v-icon>
+                      <span>📸 Galerie d'Images</span>
+                      <v-spacer></v-spacer>
+                      <v-btn
+                        color="primary"
+                        variant="outlined"
+                        size="small"
+                        @click="triggerImageUpload"
+                        :loading="uploading"
+                      >
+                        <v-icon left>mdi-plus</v-icon>
+                        Ajouter
+                      </v-btn>
+                    </v-card-title>
+                    <v-card-text>
+                      <ProductImageGallery 
+                        :images="productImages" 
+                        :show-delete-buttons="true"
+                        @delete-image="removeImage"
+                      />
+                      
+                      <!-- Input file caché pour l'upload -->
+                      <input
+                        ref="fileInput"
+                        type="file"
+                        accept="image/*"
+                        style="display: none"
+                        @change="handleImageUpload"
+                      />
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+
                 <!-- Informations de base -->
                 <v-col cols="12" md="6">
                   <h3 class="mb-4">📝 Informations de Base</h3>
@@ -293,20 +330,26 @@
   </v-container>
 </template>
 
+
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getSupplierProduct, updateSupplierProduct } from '@/services/products'
 import { getAllCategories } from '@/services/categories'
+import ProductImageGallery from '@/components/supplier/ProductImageGallery.vue'
+import { getProductImages, addProductImage, deleteProductImage } from '@/services/productImages'
 
 const router = useRouter()
 const route = useRoute()
 
 const product = ref(null)
+const productImages = ref([])
 const loading = ref(false)
 const updating = ref(false)
 const valid = ref(false)
 const categories = ref([])
+const uploading = ref(false)
+const fileInput = ref(null)
 
 const formData = reactive({
   title: '',
@@ -339,11 +382,6 @@ const fetchProduct = async () => {
     product.value = response.data
     
     console.log('🔍 Données du produit reçues:', product.value)
-    console.log('🔍 Catégorie du produit:', product.value.category)
-    console.log('🔍 Sous-catégorie du produit:', product.value.subCategory)
-    console.log('🔍 État bio du produit:', product.value.organic)
-    console.log('🔍 État local du produit:', product.value.local)
-    console.log('🔍 État frais du produit:', product.value.fresh)
     
     // Remplir le formulaire avec les données du produit
     formData.title = product.value.title || ''
@@ -363,21 +401,15 @@ const fetchProduct = async () => {
     formData.storageConditions = product.value.storageConditions || ''
     formData.nutritionalInfo = product.value.nutritionalInfo || ''
     formData.allergens = product.value.allergens || ''
-    
-    console.log('🔍 Mapping des champs agricoles:')
-    console.log('  - origin:', product.value.origin, '->', formData.origin)
-    console.log('  - farmingMethod:', product.value.farmingMethod, '->', formData.farmingMethod)
-    console.log('  - season:', product.value.season, '->', formData.season)
-    console.log('  - unit:', product.value.unit, '->', formData.unit)
-    console.log('  - weight:', product.value.weight, '->', formData.weight)
-    console.log('  - storageConditions:', product.value.storageConditions, '->', formData.storageConditions)
-    console.log('  - nutritionalInfo:', product.value.nutritionalInfo, '->', formData.nutritionalInfo)
-    console.log('  - allergens:', product.value.allergens, '->', formData.allergens)
     formData.organic = Boolean(product.value.organic)
     formData.local = Boolean(product.value.local)
     formData.fresh = Boolean(product.value.fresh)
     
     console.log('🔍 Données du formulaire après mapping:', formData)
+    
+    // Charger les images du produit
+    await fetchProductImages(productId)
+    
   } catch (error) {
     console.error('Erreur lors du chargement du produit:', error)
   } finally {
@@ -385,12 +417,21 @@ const fetchProduct = async () => {
   }
 }
 
+const fetchProductImages = async (productId) => {
+  try {
+    const response = await getProductImages(productId)
+    productImages.value = response.data
+    console.log('🖼️ Images du produit chargées:', productImages.value)
+  } catch (error) {
+    console.error('Erreur lors du chargement des images du produit:', error)
+    productImages.value = []
+  }
+}
+
 const fetchCategories = async () => {
   try {
     const response = await getAllCategories()
-    console.log('🔍 Catégories récupérées:', response)
     categories.value = response.map(cat => cat.name)
-    console.log('🔍 Noms des catégories:', categories.value)
   } catch (error) {
     console.error('Erreur lors du chargement des catégories:', error)
   }
@@ -402,14 +443,7 @@ const updateProduct = async () => {
   updating.value = true
   try {
     const productId = route.params.id
-    
-    console.log('🔍 Données envoyées pour la mise à jour:', formData)
-    
-    const response = await updateSupplierProduct(productId, formData)
-    
-    console.log('🔍 Réponse de la mise à jour:', response.data)
-    
-    // Rediriger vers la liste des produits
+    await updateSupplierProduct(productId, formData)
     router.push('/supplier/products')
   } catch (error) {
     console.error('Erreur lors de la mise à jour:', error)
@@ -422,11 +456,91 @@ const goBack = () => {
   router.push('/supplier/products')
 }
 
+// Fonctions pour l'upload d'images
+const triggerImageUpload = () => {
+  fileInput.value?.click()
+}
+
+const handleImageUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  // Vérifier le type de fichier
+  if (!file.type.startsWith('image/')) {
+    alert('Veuillez sélectionner un fichier image')
+    return
+  }
+  
+  // Vérifier la taille (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('La taille du fichier ne doit pas dépasser 5MB')
+    return
+  }
+  
+  await uploadImage(file)
+}
+
+const uploadImage = async (file) => {
+  uploading.value = true
+  
+  try {
+    console.log('📸 Upload de l\'image:', file.name)
+    
+    const productId = route.params.id
+    const response = await addProductImage(productId, file)
+    
+    console.log('✅ Image uploadée avec succès:', response)
+    
+    // Recharger les images du produit
+    await fetchProductImages(productId)
+    
+    // Afficher un message de succès
+    alert('Image ajoutée avec succès !')
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'upload:', error)
+    alert('Erreur lors de l\'ajout de l\'image. Veuillez réessayer.')
+  } finally {
+    uploading.value = false
+    // Réinitialiser l'input file
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+  }
+}
+
+// Fonction pour supprimer une image
+const removeImage = async (imageId) => {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
+    return
+  }
+  
+  try {
+    console.log('🗑️ Suppression de l\'image:', imageId)
+    
+    const productId = route.params.id
+    await deleteProductImage(productId, imageId)
+    
+    console.log('✅ Image supprimée avec succès')
+    
+    // Recharger les images du produit
+    await fetchProductImages(productId)
+    
+    // Afficher un message de succès
+    alert('Image supprimée avec succès !')
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de la suppression:', error)
+    alert('Erreur lors de la suppression de l\'image. Veuillez réessayer.')
+  }
+}
+
 onMounted(() => {
   fetchProduct()
   fetchCategories()
 })
 </script>
+
 
 <style scoped>
 .v-card {
