@@ -72,11 +72,18 @@ public class CartServiceImpl implements CartService {
     }
 
     private int calculateDiscountPercentage(int mrpPrice, int sellingPrice) {
-        if (mrpPrice <= 0){
-            throw new IllegalArgumentException("Actual price must be greater than 0");
+        // Si le prix MRP est 0 ou négatif, pas de remise
+        if (mrpPrice <= 0) {
+            return 0;
         }
+        
+        // Si le prix de vente est supérieur au prix MRP, c'est une augmentation
+        if (sellingPrice >= mrpPrice) {
+            return 0; // Pas de remise, prix normal ou augmentation
+        }
+        
         double discount = mrpPrice - sellingPrice;
-        double discountPercentage = (discount/mrpPrice)*100;
-        return (int)discountPercentage;
+        double discountPercentage = (discount / mrpPrice) * 100;
+        return (int) discountPercentage;
     }
 }

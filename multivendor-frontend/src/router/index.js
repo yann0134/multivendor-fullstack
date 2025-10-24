@@ -213,6 +213,11 @@ const routes = [
         component: SupplierCollection
       },
       {
+        path: 'revenue',
+        name: 'SupplierRevenue',
+        component: () => import('@/views/supplier/Revenue.vue')
+      },
+      {
         path: 'collection/:id',
         name: 'SupplierCollectionDetail',
         component: SupplierCollectionDetail
@@ -279,6 +284,11 @@ const routes = [
         path: 'orders',
         name: 'WarehouseOrders',
         component: WarehouseOrders
+      },
+      {
+        path: 'receptions',
+        name: 'WarehouseReceptions',
+        component: () => import('@/views/warehouse/Receptions.vue')
       },
       {
         path: 'profile',

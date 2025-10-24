@@ -22,98 +22,27 @@
       <v-col cols="12" md="8">
         <v-card>
           <v-card-title>Articles dans votre panier</v-card-title>
-          <v-list>
-            <v-list-item
+          <v-card-text>
+            <CartItem
               v-for="item in cartStore.cartItems"
-              :key="item.id"
-              class="cart-item"
-            >
-              <template v-slot:prepend>
-                <v-img
-                  :src="item.product.images?.[0] || '/placeholder.jpg'"
-                  width="80"
-                  height="80"
-                  cover
-                />
-              </template>
-              
-              <v-list-item-title>{{ item.product.title }}</v-list-item-title>
-              <v-list-item-subtitle>
-                Taille: {{ item.size }} | Couleur: {{ item.color || 'Non spécifiée' }}
-              </v-list-item-subtitle>
-              
-              <template v-slot:append>
-                <div class="d-flex align-center">
-                  <v-btn
-                    icon
-                    size="small"
-                    @click="updateQuantity(item.id, item.quantity - 1)"
-                    :disabled="item.quantity <= 1"
-                  >
-                    <v-icon>mdi-minus</v-icon>
-                  </v-btn>
-                  
-                  <span class="mx-4">{{ item.quantity }}</span>
-                  
-                  <v-btn
-                    icon
-                    size="small"
-                    @click="updateQuantity(item.id, item.quantity + 1)"
-                    :disabled="item.quantity >= item.product.quantity"
-                  >
-                    <v-icon>mdi-plus</v-icon>
-                  </v-btn>
-                  
-                  <div class="ml-4 text-right">
-                    <div class="text-h6">{{ (item.sellingPrice * item.quantity).toFixed(2) }}€</div>
-                    <div v-if="item.mrpPrice > item.sellingPrice" class="text-decoration-line-through text-grey">
-                      {{ (item.mrpPrice * item.quantity).toFixed(2) }}€
-                    </div>
-                  </div>
-                  
-                  <v-btn
-                    icon
-                    color="error"
-                    @click="removeItem(item.id)"
-                    class="ml-2"
-                  >
-                    <v-icon>mdi-delete</v-icon>
-                  </v-btn>
-                </div>
-              </template>
-            </v-list-item>
-          </v-list>
+              :key="`cart-item-${item.id}`"
+              :item="item"
+              @update-quantity="(newQuantity) => updateQuantity(item.id, newQuantity)"
+              @remove-item="() => removeItem(item.id)"
+            />
+          </v-card-text>
         </v-card>
       </v-col>
       
       <!-- Résumé de la commande -->
       <v-col cols="12" md="4">
-        <v-card>
-          <v-card-title>Résumé de la commande</v-card-title>
-          <v-card-text>
-            <div class="d-flex justify-space-between mb-2">
-              <span>Sous-total ({{ cartStore.totalItems }} articles)</span>
-              <span>{{ cartStore.totalPrice.toFixed(2) }}€</span>
-            </div>
-            
-            <div v-if="cartStore.discount > 0" class="d-flex justify-space-between mb-2 text-success">
-              <span>Remise</span>
-              <span>-{{ cartStore.discount.toFixed(2) }}€</span>
-            </div>
-            
-            <div class="d-flex justify-space-between mb-2">
-              <span>Livraison</span>
-              <span>Gratuite</span>
-            </div>
-            
-            <v-divider class="my-4" />
-            
-            <div class="d-flex justify-space-between text-h6">
-              <span>Total</span>
-              <span>{{ cartStore.totalPrice.toFixed(2) }}€</span>
-            </div>
-          </v-card-text>
-          
+        <CartSummary
+          :total-items="cartStore.totalItems"
+          :total-units="cartStore.totalUnits"
+          :total-price="cartStore.totalPrice"
+        />
+        
+        <v-card class="mt-4">
           <v-card-actions>
             <v-btn
               color="primary"
@@ -121,6 +50,7 @@
               size="large"
               to="/customer/checkout"
             >
+              <v-icon left>mdi-credit-card</v-icon>
               Passer la commande
             </v-btn>
           </v-card-actions>
@@ -156,6 +86,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useCartStore } from '@/stores/cart'
+import CartItem from '@/components/customer/CartItem.vue'
+import CartSummary from '@/components/customer/CartSummary.vue'
 
 const cartStore = useCartStore()
 const couponCode = ref('')
@@ -183,6 +115,23 @@ const applyCoupon = async () => {
   } finally {
     couponLoading.value = false
   }
+}
+
+// Fonction de formatage des prix
+const formatPrice = (price) => {
+  if (!price) return '0 FCFA'
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price).replace('XOF', 'FCFA')
+}
+
+// Fonction de formatage des quantités
+const formatQuantity = (quantity) => {
+  if (!quantity) return '0'
+  return new Intl.NumberFormat('fr-FR').format(quantity)
 }
 
 onMounted(async () => {

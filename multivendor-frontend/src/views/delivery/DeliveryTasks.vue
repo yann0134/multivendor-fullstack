@@ -47,7 +47,7 @@
         <v-card color="purple" dark>
           <v-card-text class="text-center">
             <v-icon size="40">mdi-currency-usd</v-icon>
-            <div class="text-h4">{{ stats.earnings }} FCFA</div>
+            <div class="text-h4">{{ stats.earnings }}  FCFA</div>
             <div>Gains du jour</div>
           </v-card-text>
         </v-card>
@@ -194,7 +194,7 @@
               <p><strong>ID:</strong> #{{ selectedDelivery.orderId }}</p>
               <p><strong>Produit:</strong> {{ selectedDelivery.productName }}</p>
               <p><strong>Quantité:</strong> {{ selectedDelivery.quantity }} {{ selectedDelivery.unit }}</p>
-              <p><strong>Prix total:</strong> {{ selectedDelivery.totalPrice }} FCFA</p>
+              <p><strong>Prix total:</strong> {{ selectedDelivery.totalPrice }}  FCFA</p>
             </v-col>
             <v-col cols="12" md="6">
               <h4>👤 Client</h4>

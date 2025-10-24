@@ -16,6 +16,16 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    // Log de débogage pour toutes les requêtes
+    console.log('🚀 Requête API:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+      fullURL: `${config.baseURL}${config.url}`,
+      headers: config.headers
+    })
+    
     return config
   },
   (error) => {

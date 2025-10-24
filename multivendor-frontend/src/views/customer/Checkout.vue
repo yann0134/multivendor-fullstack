@@ -143,11 +143,32 @@
                       <v-list-item
                         v-for="item in cartStore.cartItems"
                         :key="item.id"
+                        class="mb-2"
                       >
-                        <v-list-item-title>{{ item.product.title }}</v-list-item-title>
-                        <v-list-item-subtitle>
-                          Quantité: {{ item.quantity }} | Prix: {{ (item.sellingPrice * item.quantity).toFixed(2) }}€
+                        <template v-slot:prepend>
+                          <v-avatar size="40" rounded>
+                            <v-img
+                              :src="getProductImage(item.product)"
+                              :alt="item.product.title"
+                            />
+                          </v-avatar>
+                        </template>
+                        
+                        <v-list-item-title class="text-h6">{{ item.product.title }}</v-list-item-title>
+                        <v-list-item-subtitle class="text-body-2 text-grey">
+                          {{ item.product.description }}
                         </v-list-item-subtitle>
+                        
+                        <template v-slot:append>
+                          <div class="text-right">
+                            <div class="text-caption text-grey">
+                              {{ formatQuantity(item.quantity) }} × {{ formatPrice(item.product.sellingPrice) }}
+                            </div>
+                            <div class="text-h6 font-weight-bold text-primary">
+                              {{ formatPrice(calculateItemTotal(item)) }}
+                            </div>
+                          </div>
+                        </template>
                       </v-list-item>
                     </v-list>
                   </div>
@@ -183,20 +204,29 @@
           <v-card-title>Résumé de la commande</v-card-title>
           <v-card-text>
             <div class="d-flex justify-space-between mb-2">
-              <span>Sous-total ({{ cartStore.totalItems }} articles)</span>
-              <span>{{ cartStore.totalPrice.toFixed(2) }}€</span>
+              <span class="text-body-2">
+                <v-icon size="small" class="mr-1">mdi-cart</v-icon>
+                Sous-total ({{ cartStore.totalItems }} article{{ cartStore.totalItems > 1 ? 's' : '' }})
+              </span>
+              <span class="text-h6 font-weight-bold text-primary">{{ formatPrice(cartStore.totalPrice) }}</span>
             </div>
             
             <div class="d-flex justify-space-between mb-2">
-              <span>Livraison</span>
-              <span>Gratuite</span>
+              <span class="text-body-2">
+                <v-icon size="small" class="mr-1">mdi-truck-delivery</v-icon>
+                Livraison
+              </span>
+              <span class="text-success font-weight-bold">
+                <v-icon size="small" class="mr-1">mdi-check-circle</v-icon>
+                Gratuite
+              </span>
             </div>
             
             <v-divider class="my-4" />
             
-            <div class="d-flex justify-space-between text-h6">
+            <div class="d-flex justify-space-between text-h5 font-weight-bold">
               <span>Total</span>
-              <span>{{ cartStore.totalPrice.toFixed(2) }}€</span>
+              <span class="text-primary">{{ formatPrice(cartStore.totalPrice) }}</span>
             </div>
           </v-card-text>
         </v-card>
@@ -289,6 +319,43 @@ const placeOrder = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// Fonction de formatage des prix
+const formatPrice = (price) => {
+  if (!price) return '0 FCFA'
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price).replace('XOF', 'FCFA')
+}
+
+// Fonction de formatage des quantités
+const formatQuantity = (quantity) => {
+  if (!quantity) return '0'
+  return new Intl.NumberFormat('fr-FR').format(quantity)
+}
+
+// Calcul du total pour un article
+const calculateItemTotal = (item) => {
+  const unitPrice = item.product?.sellingPrice || 0
+  return unitPrice * item.quantity
+}
+
+// Fonction pour récupérer l'image du produit
+const getProductImage = (product) => {
+  if (product?.images && product.images.length > 0) {
+    return product.images[0].imageUrl || product.images[0].url || product.images[0]
+  }
+  // Image par défaut basée sur le type de produit
+  if (product?.category?.type === 'ANIMAL') {
+    return '/images/default-animal.jpg'
+  } else if (product?.category?.type === 'VEGETAL') {
+    return '/images/default-vegetable.jpg'
+  }
+  return '/images/default-product.jpg'
 }
 
 onMounted(async () => {

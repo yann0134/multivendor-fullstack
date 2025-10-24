@@ -129,7 +129,7 @@
               <h4>📦 Produit</h4>
               <p><strong>Nom:</strong> {{ selectedTask.productName }}</p>
               <p><strong>Quantité:</strong> {{ selectedTask.quantity }} {{ selectedTask.unit }}</p>
-              <p><strong>Prix unitaire:</strong> {{ selectedTask.unitPrice }} FCFA</p>
+              <p><strong>Prix unitaire:</strong> {{ selectedTask.unitPrice }}  FCFA</p>
             </v-col>
             <v-col cols="12" md="6">
               <h4>🌾 Fournisseur</h4>

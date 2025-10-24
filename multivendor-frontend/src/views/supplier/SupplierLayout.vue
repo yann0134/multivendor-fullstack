@@ -89,7 +89,7 @@
         <v-list-item 
           prepend-icon="mdi-currency-usd" 
           title="Revenus" 
-          to="/supplier/earnings"
+          to="/supplier/revenue"
           class="mb-1"
         />
         

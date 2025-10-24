@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Cart</title>
+</head>
+<body>
+    <h1>Test API Cart</h1>
+    <button onclick="testCartAPI()">Tester l'API Cart</button>
+    <div id="result"></div>
+
+    <script>
+        async function testCartAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Test en cours...</p>';
+
+            try {
+                // Test avec PUT
+                console.log('🧪 Test PUT /api/cart/add');
+                const response = await fetch('http://localhost:3026/api/cart/add', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer test-token'
+                    },
+                    body: JSON.stringify({
+                        productId: 1,
+                        quantity: 1,
+                        size: 'kg'
+                    })
+                });
+
+                console.log('📡 Réponse PUT:', response.status, response.statusText);
+                resultDiv.innerHTML += `<p>PUT: ${response.status} - ${response.statusText}</p>`;
+
+                // Test avec POST pour comparaison
+                console.log('🧪 Test POST /api/cart/add');
+                const responsePost = await fetch('http://localhost:3026/api/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer test-token'
+                    },
+                    body: JSON.stringify({
+                        productId: 1,
+                        quantity: 1,
+                        size: 'kg'
+                    })
+                });
+
+                console.log('📡 Réponse POST:', responsePost.status, responsePost.statusText);
+                resultDiv.innerHTML += `<p>POST: ${responsePost.status} - ${responsePost.statusText}</p>`;
+
+            } catch (error) {
+                console.error('❌ Erreur:', error);
+                resultDiv.innerHTML += `<p>Erreur: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

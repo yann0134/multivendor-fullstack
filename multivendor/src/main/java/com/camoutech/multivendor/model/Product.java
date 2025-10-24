@@ -11,6 +11,7 @@ package com.camoutech.multivendor.model;
 import jakarta.persistence.*;
 import lombok.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -96,7 +97,7 @@ public class Product {
     private Seller seller; // Vendeur (fermier)
 
     @ManyToOne
-    @JsonIgnore
+    @JsonIgnoreProperties({"suppliedProducts", "supplyOrders"})
     private Supplier supplier; // Fournisseur (fermier)
 
     private double supplierPrice; // Prix d'achat au fournisseur
@@ -131,6 +132,24 @@ public class Product {
     private String rejectionReason; // Raison du rejet si applicable
 
     private LocalDateTime statusUpdatedAt; // Date de dernière mise à jour du statut
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt; // Date de dernière mise à jour générale
+    
+    @Column(name = "received_at")
+    private LocalDateTime receivedAt; // Date de réception par l'entrepôt
+    
+    @Column(name = "delivery_date")
+    private LocalDateTime deliveryDate; // Date de livraison (expédition par le fournisseur)
+    
+    @PrePersist
+    @PreUpdate
+    private void updateTimestamps() {
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+        updatedAt = LocalDateTime.now();
+    }
 
     private String reviewedBy; // Email de l'administrateur qui a validé/rejeté
 

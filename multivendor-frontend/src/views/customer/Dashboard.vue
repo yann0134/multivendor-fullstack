@@ -56,7 +56,7 @@
       </v-col>
     </v-row>
 
-    <!-- Statistiques rapides -->
+<!--     Statistiques rapides
     <v-row class="mt-6">
       <v-col cols="12">
         <h2 class="text-h5 mb-4">📊 Mes Statistiques</h2>
@@ -94,7 +94,7 @@
       </v-col>
     </v-row>
 
-    <!-- Actions rapides -->
+    &lt;!&ndash; Actions rapides &ndash;&gt;
     <v-row class="mt-6">
       <v-col cols="12">
         <h2 class="text-h5 mb-4">Actions rapides</h2>
@@ -129,7 +129,7 @@
       </v-col>
     </v-row>
 
-    <!-- Commandes récentes -->
+    &lt;!&ndash; Commandes récentes &ndash;&gt;
     <v-row class="mt-6">
       <v-col cols="12">
         <h2 class="text-h5 mb-4">Commandes récentes</h2>
@@ -139,7 +139,7 @@
               v-for="order in recentOrders"
               :key="order.id"
               :title="`Commande #${order.orderId}`"
-              :subtitle="`${order.totalSellingPrice}€ - ${order.orderStatus}`"
+              :subtitle="`${order.totalSellingPrice} FCFA - ${order.orderStatus}`"
               @click="$router.push(`/customer/order/${order.id}`)"
             >
               <template v-slot:prepend>
@@ -154,7 +154,7 @@
           </v-list>
         </v-card>
       </v-col>
-    </v-row>
+    </v-row>-->
   </v-container>
 </template>
 
@@ -201,16 +201,14 @@ const goToCategory = (category) => {
 onMounted(async () => {
   try {
     // Charger les catégories
-    const categoriesResponse = await fetch('http://localhost:3026/api/categories')
-    categories.value = await categoriesResponse.json()
+    await productStore.fetchCategories()
+    categories.value = productStore.categories
     
-    // Charger les produits en vedette
-    const featuredResponse = await fetch('http://localhost:3026/api/products/featured')
-    featuredProducts.value = await featuredResponse.json()
+    // Charger les produits en vedette (filtrés par statut reçu)
+    featuredProducts.value = await productStore.fetchFeaturedProducts()
     
-    // Charger les nouveaux produits
-    const newResponse = await fetch('http://localhost:3026/api/products/new')
-    newProducts.value = await newResponse.json()
+    // Charger les nouveaux produits (filtrés par statut reçu)
+    newProducts.value = await productStore.fetchNewProducts()
     
     // Charger les données du dashboard
     await orderStore.fetchUserOrders()

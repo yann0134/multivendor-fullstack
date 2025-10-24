@@ -96,7 +96,7 @@
             
             <!-- Prix -->
             <div class="mb-4">
-              <label class="text-subtitle-2 mb-2 d-block">Prix (FCFA)</label>
+              <label class="text-subtitle-2 mb-2 d-block">Prix ( FCFA)</label>
             <v-range-slider
               v-model="priceRange"
               :min="0"

@@ -1,167 +1,157 @@
 <template>
-  <v-container fluid>
-    <!-- En-tête avec workflow -->
+  <v-container>
+    <!-- En-tête du tableau de bord -->
     <v-row>
       <v-col cols="12">
         <v-card class="mb-6">
           <v-card-title class="d-flex align-center">
-            <v-icon class="mr-3" color="primary">mdi-sprout</v-icon>
-            <span>🌾 Dashboard Fournisseur - Workflow AgriMarket</span>
+            <v-icon class="mr-3" color="primary" size="large">mdi-view-dashboard</v-icon>
+            <span>📊 Tableau de Bord</span>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="primary"
+              variant="outlined"
+              @click="refreshDashboard"
+              :loading="loading"
+            >
+              <v-icon left>mdi-refresh</v-icon>
+              Actualiser
+            </v-btn>
           </v-card-title>
           <v-card-subtitle>
-            Présentez vos produits agricoles avec images et suivez le processus de validation
+            Vue d'ensemble de vos produits, revenus et performances
           </v-card-subtitle>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Workflow visuel -->
-    <v-row class="mb-6">
-      <v-col cols="12">
-        <v-card>
-          <v-card-title>🔄 Votre Workflow de Production</v-card-title>
+    <!-- Statistiques générales -->
+    <v-row>
+      <v-col cols="12" md="3">
+        <v-card class="text-center" color="blue" variant="tonal">
           <v-card-text>
-            <v-stepper v-model="currentStep" alt-labels>
-              <v-stepper-header>
-                <v-stepper-item
-                  :complete="currentStep > 1"
-                  :value="1"
-                  color="primary"
-                >
-                  <v-icon>mdi-plus-circle</v-icon>
-                  <div class="text-caption">Ajouter Produit</div>
-                </v-stepper-item>
-                <v-divider></v-divider>
-                <v-stepper-item
-                  :complete="currentStep > 2"
-                  :value="2"
-                  color="orange"
-                >
-                  <v-icon>mdi-image-multiple</v-icon>
-                  <div class="text-caption">Upload Images</div>
-                </v-stepper-item>
-                <v-divider></v-divider>
-                <v-stepper-item
-                  :complete="currentStep > 3"
-                  :value="3"
-                  color="blue"
-                >
-                  <v-icon>mdi-check-circle</v-icon>
-                  <div class="text-caption">Validation Admin</div>
-                </v-stepper-item>
-                <v-divider></v-divider>
-                <v-stepper-item
-                  :complete="currentStep > 4"
-                  :value="4"
-                  color="green"
-                >
-                  <v-icon>mdi-truck-delivery</v-icon>
-                  <div class="text-caption">Récupération</div>
-                </v-stepper-item>
-              </v-stepper-header>
-            </v-stepper>
+            <v-icon size="48" color="blue">mdi-package-variant</v-icon>
+            <div class="text-h4 font-weight-bold mt-2">{{ stats.totalProducts }}</div>
+            <div class="text-subtitle-1">Total Produits</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      
+      <v-col cols="12" md="3">
+        <v-card class="text-center" color="green" variant="tonal">
+          <v-card-text>
+            <v-icon size="48" color="green">mdi-check-circle</v-icon>
+            <div class="text-h4 font-weight-bold mt-2">{{ stats.approvedProducts }}</div>
+            <div class="text-subtitle-1">Approuvés</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      
+      <v-col cols="12" md="3">
+        <v-card class="text-center" color="orange" variant="tonal">
+          <v-card-text>
+            <v-icon size="48" color="orange">mdi-clock</v-icon>
+            <div class="text-h4 font-weight-bold mt-2">{{ stats.pendingProducts }}</div>
+            <div class="text-subtitle-1">En Attente</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      
+      <v-col cols="12" md="3">
+        <v-card class="text-center" color="red" variant="tonal">
+          <v-card-text>
+            <v-icon size="48" color="red">mdi-close-circle</v-icon>
+            <div class="text-h4 font-weight-bold mt-2">{{ stats.rejectedProducts }}</div>
+            <div class="text-subtitle-1">Rejetés</div>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Statistiques adaptées au workflow -->
-    <v-row>
-      <v-col cols="12" md="3">
-        <v-card class="text-center pa-4" color="primary" dark>
-          <v-icon size="48" class="mb-2">mdi-package-variant</v-icon>
-          <h3 class="text-h6">Mes Produits</h3>
-          <p class="text-h4">{{ stats.totalProducts }}</p>
-          <v-btn small color="white" text @click="$router.push('/supplier/products')">
-            Gérer
-          </v-btn>
+    <!-- Statistiques de livraison -->
+    <v-row class="mt-4">
+      <v-col cols="12" md="6">
+        <v-card class="text-center" color="purple" variant="tonal">
+          <v-card-text>
+            <v-icon size="48" color="purple">mdi-truck</v-icon>
+            <div class="text-h4 font-weight-bold mt-2">{{ stats.shippedProducts }}</div>
+            <div class="text-subtitle-1">Expédiés</div>
+          </v-card-text>
         </v-card>
       </v-col>
       
-      <v-col cols="12" md="3">
-        <v-card class="text-center pa-4" color="orange" dark>
-          <v-icon size="48" class="mb-2">mdi-clock-outline</v-icon>
-          <h3 class="text-h6">En Validation</h3>
-          <p class="text-h4">{{ stats.pendingValidation }}</p>
-          <v-btn small color="white" text @click="viewPendingProducts">
-            Voir
-          </v-btn>
-        </v-card>
-      </v-col>
-      
-      <v-col cols="12" md="3">
-        <v-card class="text-center pa-4" color="green" dark>
-          <v-icon size="48" class="mb-2">mdi-check-circle</v-icon>
-          <h3 class="text-h6">Validés</h3>
-          <p class="text-h4">{{ stats.validatedProducts }}</p>
-          <v-btn small color="white" text @click="viewValidatedProducts">
-            Voir
-          </v-btn>
-        </v-card>
-      </v-col>
-      
-      <v-col cols="12" md="3">
-        <v-card class="text-center pa-4" color="blue" dark>
-          <v-icon size="48" class="mb-2">mdi-truck-delivery</v-icon>
-          <h3 class="text-h6">Récupérations</h3>
-          <p class="text-h4">{{ stats.pendingCollection }}</p>
-          <v-btn small color="white" text @click="$router.push('/supplier/collection')">
-            Voir
-          </v-btn>
+      <v-col cols="12" md="6">
+        <v-card class="text-center" color="success" variant="tonal">
+          <v-card-text>
+            <v-icon size="48" color="success">mdi-truck-check</v-icon>
+            <div class="text-h4 font-weight-bold mt-2">{{ stats.deliveredProducts }}</div>
+            <div class="text-subtitle-1">Livrés</div>
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Actions rapides -->
-    <v-row class="mt-6">
+    <!-- Revenus et finances -->
+    <v-row class="mt-4">
       <v-col cols="12">
         <v-card>
-          <v-card-title>⚡ Actions Rapides</v-card-title>
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-3" color="success">mdi-currency-usd</v-icon>
+            <span>💰 Revenus et Finances</span>
+          </v-card-title>
           <v-card-text>
             <v-row>
               <v-col cols="12" md="4">
-                <v-btn
-                  color="primary"
-                  large
-                  block
-                  @click="$router.push('/supplier/products/add')"
-                >
-                  <v-icon left>mdi-plus</v-icon>
-                  Ajouter un Produit
-                </v-btn>
+                <v-card class="text-center" color="success" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="success">mdi-wallet</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ formatPrice(stats.totalRevenue) }}</div>
+                    <div class="text-subtitle-1">Revenus Totaux</div>
+                  </v-card-text>
+                </v-card>
               </v-col>
+              
               <v-col cols="12" md="4">
-                <v-btn
-                  color="orange"
-                  large
-                  block
-                  @click="$router.push('/supplier/products/images')"
-                >
-                  <v-icon left>mdi-image-multiple</v-icon>
-                  Gérer les Images
-                </v-btn>
+                <v-card class="text-center" color="green" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="green">mdi-check-circle</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ formatPrice(stats.receivedAmount) }}</div>
+                    <div class="text-subtitle-1">Montant Reçu</div>
+                  </v-card-text>
+                </v-card>
               </v-col>
-              <v-col cols="12" md="3">
-                <v-btn
-                  color="info"
-                  large
-                  block
-                  @click="$router.push('/supplier/orders')"
-                >
-                  <v-icon left>mdi-clipboard-list</v-icon>
-                  Mes Commandes
-                </v-btn>
+              
+              <v-col cols="12" md="4">
+                <v-card class="text-center" color="orange" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="orange">mdi-clock</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ formatPrice(stats.pendingAmount) }}</div>
+                    <div class="text-subtitle-1">En Attente</div>
+                  </v-card-text>
+                </v-card>
               </v-col>
-              <v-col cols="12" md="3">
-                <v-btn
-                  color="blue"
-                  large
-                  block
-                  @click="$router.push('/supplier/collection')"
-                >
-                  <v-icon left>mdi-truck-delivery</v-icon>
-                  Récupérations
-                </v-btn>
+            </v-row>
+            
+            <!-- Évolution mensuelle -->
+            <v-row class="mt-4">
+              <v-col cols="12" md="6">
+                <v-card class="text-center" color="blue" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="blue">mdi-calendar-month</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ formatPrice(stats.thisMonthRevenue) }}</div>
+                    <div class="text-subtitle-1">Ce Mois</div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              
+              <v-col cols="12" md="6">
+                <v-card class="text-center" color="grey" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="grey">mdi-calendar-month-outline</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ formatPrice(stats.lastMonthRevenue) }}</div>
+                    <div class="text-subtitle-1">Mois Dernier</div>
+                  </v-card-text>
+                </v-card>
               </v-col>
             </v-row>
           </v-card-text>
@@ -169,150 +159,205 @@
       </v-col>
     </v-row>
 
-    <!-- Produits récents -->
-    <v-row class="mt-6">
+    <!-- Performance et analytics -->
+    <v-row class="mt-4">
       <v-col cols="12">
         <v-card>
-          <v-card-title>📦 Mes Produits Récents</v-card-title>
-          <v-data-table
-            :headers="productHeaders"
-            :items="recentProducts"
-            :items-per-page="5"
-          >
-            <template v-slot:item.image="{ item }">
-              <v-avatar size="40" rounded>
-                <v-img :src="item.image" :alt="item.name"></v-img>
-              </v-avatar>
-            </template>
-            <template v-slot:item.status="{ item }">
-              <v-chip
-                :color="getStatusColor(item.status)"
-                small
-                :text-color="getStatusTextColor(item.status)"
-              >
-                {{ getStatusText(item.status) }}
-              </v-chip>
-            </template>
-            <template v-slot:item.actions="{ item }">
-              <v-btn
-                small
-                color="primary"
-                text
-                @click="editProduct(item)"
-              >
-                <v-icon small>mdi-pencil</v-icon>
-              </v-btn>
-            </template>
-          </v-data-table>
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-3" color="purple">mdi-chart-line</v-icon>
+            <span>📈 Performance et Analytics</span>
+          </v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col cols="12" md="3">
+                <v-card class="text-center" color="purple" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="purple">mdi-percent</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ stats.completionRate.toFixed(1) }}%</div>
+                    <div class="text-subtitle-1">Taux de Complétion</div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              
+              <v-col cols="12" md="3">
+                <v-card class="text-center" color="blue" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="blue">mdi-clock-outline</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ stats.averageProcessingTime.toFixed(1) }}h</div>
+                    <div class="text-subtitle-1">Temps Moyen</div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              
+              <v-col cols="12" md="3">
+                <v-card class="text-center" color="green" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="green">mdi-package-variant-closed</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ stats.completedOrders }}</div>
+                    <div class="text-subtitle-1">Commandes Complétées</div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              
+              <v-col cols="12" md="3">
+                <v-card class="text-center" color="orange" variant="tonal">
+                  <v-card-text>
+                    <v-icon size="48" color="orange">mdi-star</v-icon>
+                    <div class="text-h4 font-weight-bold mt-2">{{ stats.topSellingProduct }}</div>
+                    <div class="text-subtitle-1">Top Produit</div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Informations temporelles -->
+    <v-row class="mt-4">
+      <v-col cols="12">
+        <v-card>
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-3" color="info">mdi-information</v-icon>
+            <span>ℹ️ Informations</span>
+          </v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col cols="12" md="6">
+                <v-list>
+                  <v-list-item>
+                    <v-list-item-title>Dernière Activité</v-list-item-title>
+                    <v-list-item-subtitle>{{ formatDate(stats.lastActivity) }}</v-list-item-subtitle>
+                  </v-list-item>
+                  <v-list-item>
+                    <v-list-item-title>Total Commandes</v-list-item-title>
+                    <v-list-item-subtitle>{{ stats.totalOrders }}</v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+              
+              <v-col cols="12" md="6">
+                <v-list>
+                  <v-list-item>
+                    <v-list-item-title>Produit le Plus Vendu</v-list-item-title>
+                    <v-list-item-subtitle>{{ stats.topSellingProduct }} ({{ stats.topSellingQuantity }} unités)</v-list-item-subtitle>
+                  </v-list-item>
+                  <v-list-item>
+                    <v-list-item-title>Compte Créé</v-list-item-title>
+                    <v-list-item-subtitle>{{ formatDate(stats.accountCreated) }}</v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Message de chargement -->
+    <v-overlay v-model="loading" class="align-center justify-center">
+      <v-progress-circular
+        color="primary"
+        indeterminate
+        size="64"
+      ></v-progress-circular>
+    </v-overlay>
   </v-container>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import api from '@/services/api'
 
-const currentStep = ref(2) // Étape actuelle du workflow
-
+const loading = ref(false)
 const stats = ref({
-  totalProducts: 12,
-  pendingValidation: 3,
-  validatedProducts: 8,
-  pendingCollection: 2
+  totalProducts: 0,
+  approvedProducts: 0,
+  pendingProducts: 0,
+  rejectedProducts: 0,
+  shippedProducts: 0,
+  deliveredProducts: 0,
+  totalRevenue: 0,
+  receivedAmount: 0,
+  pendingAmount: 0,
+  thisMonthRevenue: 0,
+  lastMonthRevenue: 0,
+  averageProcessingTime: 0,
+  totalOrders: 0,
+  completedOrders: 0,
+  completionRate: 0,
+  lastActivity: null,
+  accountCreated: null,
+  topSellingProduct: 'Aucun',
+  topSellingQuantity: 0
 })
 
-const productHeaders = [
-  { text: 'Image', value: 'image', sortable: false, width: '60px' },
-  { text: 'Nom', value: 'name' },
-  { text: 'Catégorie', value: 'category' },
-  { text: 'Prix', value: 'price' },
-  { text: 'Stock', value: 'stock' },
-  { text: 'Statut', value: 'status' },
-  { text: 'Actions', value: 'actions', sortable: false }
-]
-
-const recentProducts = ref([
-  {
-    id: 1,
-    name: 'Tomates Bio',
-    image: '/images/tomates.jpg',
-    category: 'Légumes',
-    price: '800 FCFA/kg',
-    stock: 50,
-    status: 'PENDING_VALIDATION'
-  },
-  {
-    id: 2,
-    name: 'Carottes',
-    image: '/images/carottes.jpg',
-    category: 'Légumes',
-    price: '600 FCFA/kg',
-    stock: 30,
-    status: 'VALIDATED'
-  },
-  {
-    id: 3,
-    name: 'Bananes Plantain',
-    image: '/images/bananes.jpg',
-    category: 'Fruits',
-    price: '2000 FCFA/régime',
-    stock: 25,
-    status: 'PENDING_COLLECTION'
+const fetchDashboardStats = async () => {
+  loading.value = true
+  try {
+    console.log('📊 Récupération des statistiques du tableau de bord...')
+    const response = await api.get('/api/products/supplier/dashboard/stats')
+    console.log('📊 Statistiques reçues:', response.data)
+    
+    stats.value = response.data
+    
+    console.log('📊 Tableau de bord mis à jour:')
+    console.log('  - Total produits:', stats.value.totalProducts)
+    console.log('  - Produits approuvés:', stats.value.approvedProducts)
+    console.log('  - Revenus totaux:', stats.value.totalRevenue)
+    console.log('  - Montant reçu:', stats.value.receivedAmount)
+    
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement du tableau de bord:', error)
+    console.error('❌ Détails de l\'erreur:', error.response?.data)
+  } finally {
+    loading.value = false
   }
-])
-
-const getStatusColor = (status) => {
-  const colors = {
-    'PENDING_VALIDATION': 'orange',
-    'VALIDATED': 'green',
-    'PENDING_COLLECTION': 'blue',
-    'REJECTED': 'red'
-  }
-  return colors[status] || 'grey'
 }
 
-const getStatusTextColor = (status) => {
-  return 'white'
+const refreshDashboard = () => {
+  fetchDashboardStats()
 }
 
-const getStatusText = (status) => {
-  const texts = {
-    'PENDING_VALIDATION': 'En validation',
-    'VALIDATED': 'Validé',
-    'PENDING_COLLECTION': 'À récupérer',
-    'REJECTED': 'Rejeté'
-  }
-  return texts[status] || status
+const formatPrice = (price) => {
+  if (!price) return '0  FCFA'
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF'
+  }).format(price)
 }
 
-const viewPendingProducts = () => {
-  // Filtrer et afficher les produits en attente de validation
-  console.log('Voir produits en validation')
-}
-
-const viewValidatedProducts = () => {
-  // Filtrer et afficher les produits validés
-  console.log('Voir produits validés')
-}
-
-const viewCollections = () => {
-  // Afficher les récupérations en attente
-  console.log('Voir récupérations')
-}
-
-const editProduct = (product) => {
-  // Éditer le produit
-  console.log('Éditer produit:', product)
+const formatDate = (date) => {
+  if (!date) return 'N/A'
+  return new Date(date).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 onMounted(() => {
-  // Charger les statistiques du fournisseur
-  loadSupplierStats()
+  fetchDashboardStats()
 })
-
-const loadSupplierStats = () => {
-  // Simuler le chargement des statistiques
-  console.log('Chargement des statistiques fournisseur')
-}
 </script>
+
+<style scoped>
+.v-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.v-card:hover {
+  transform: translateY(-2px);
+}
+
+.text-h4 {
+  font-size: 2rem !important;
+}
+
+.text-subtitle-1 {
+  font-size: 0.875rem !important;
+}
+</style>

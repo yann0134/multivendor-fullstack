@@ -124,6 +124,15 @@ public class SupplyOrderController {
 
 
 
+    @GetMapping("/supplier/expedier")
+    public ResponseEntity<List<Product>> getSupplyOrdersByCurrentSupplierExpedier() {
+        List<Product> supplyOrders = supplyOrderService.getSupplyOrdersByCurrentSupplierExpedier();
+        return new ResponseEntity<>(supplyOrders, HttpStatus.OK);
+    }
+
+
+
+
 
 
 

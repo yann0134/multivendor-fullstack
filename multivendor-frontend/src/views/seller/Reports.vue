@@ -11,7 +11,7 @@
         <v-card class="text-center pa-4">
           <v-icon size="48" color="primary" class="mb-2">mdi-currency-eur</v-icon>
           <h3 class="text-h6">Chiffre d'affaires</h3>
-          <p class="text-h4">{{ report.totalEarnings }}€</p>
+          <p class="text-h4">{{ report.totalEarnings }} FCFA</p>
         </v-card>
       </v-col>
       

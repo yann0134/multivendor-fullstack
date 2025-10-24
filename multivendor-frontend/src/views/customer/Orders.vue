@@ -35,7 +35,7 @@
               </v-list-item-title>
               
               <v-list-item-subtitle>
-                {{ order.orderDate | formatDate }} • {{ order.totalSellingPrice }}€ • {{ order.totalItem }} article(s)
+                {{ order.orderDate | formatDate }} • {{ order.totalSellingPrice }} FCFA • {{ order.totalItem }} article(s)
               </v-list-item-subtitle>
               
               <template v-slot:append>

@@ -7,108 +7,209 @@
     </v-row>
 
     <v-row>
-      <v-col cols="12" md="8">
+      <!-- Informations personnelles -->
+      <v-col cols="12" md="6">
         <v-card>
-          <v-card-title>Informations personnelles</v-card-title>
+          <v-card-title>
+            <v-icon class="mr-2">mdi-account</v-icon>
+            Informations personnelles
+          </v-card-title>
           <v-card-text>
             <v-form ref="profileForm">
-              <v-row>
-                <v-col cols="12" md="6">
-                  <v-text-field
-                    v-model="profile.fullName"
-                    label="Nom complet"
-                    :rules="nameRules"
-                    required
-                  />
-                </v-col>
-                <v-col cols="12" md="6">
-                  <v-text-field
-                    v-model="profile.email"
-                    label="Email"
-                    type="email"
-                    :rules="emailRules"
-                    required
-                    readonly
-                  />
-                </v-col>
-              </v-row>
+              <v-text-field
+                v-model="userProfile.fullName"
+                label="Nom complet"
+                variant="outlined"
+                :rules="nameRules"
+                class="mb-4"
+              />
               
               <v-text-field
-                v-model="profile.mobile"
+                v-model="userProfile.email"
+                label="Email"
+                variant="outlined"
+                type="email"
+                :rules="emailRules"
+                class="mb-4"
+                disabled
+              />
+              
+              <v-text-field
+                v-model="userProfile.phone"
                 label="Téléphone"
+                variant="outlined"
                 :rules="phoneRules"
-                required
+                class="mb-4"
+              />
+              
+              <v-textarea
+                v-model="userProfile.bio"
+                label="Biographie"
+                variant="outlined"
+                rows="3"
+                class="mb-4"
               />
             </v-form>
           </v-card-text>
           <v-card-actions>
-            <v-spacer />
-            <v-btn color="primary" @click="updateProfile" :loading="loading">
-              Sauvegarder
+            <v-btn 
+              color="primary" 
+              @click="updateProfile"
+              :loading="updating"
+            >
+              Mettre à jour
             </v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
-      
-      <v-col cols="12" md="4">
-        <v-card>
-          <v-card-title>Statistiques</v-card-title>
-          <v-card-text>
-            <div class="d-flex justify-space-between mb-2">
-              <span>Commandes totales</span>
-              <span>{{ stats.totalOrders }}</span>
-            </div>
-            <div class="d-flex justify-space-between mb-2">
-              <span>Montant total</span>
-              <span>{{ stats.totalSpent.toFixed(2) }}€</span>
-            </div>
-            <div class="d-flex justify-space-between mb-2">
-              <span>Membre depuis</span>
-              <span>{{ stats.memberSince }}</span>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
 
-    <!-- Adresses -->
-    <v-row class="mt-6">
-      <v-col cols="12">
+      <!-- Adresses -->
+      <v-col cols="12" md="6">
         <v-card>
           <v-card-title>
+            <v-icon class="mr-2">mdi-map-marker</v-icon>
             Mes adresses
-            <v-spacer />
-            <v-btn color="primary" @click="showAddAddress = true">
-              Ajouter une adresse
-            </v-btn>
           </v-card-title>
           <v-card-text>
-            <v-list>
+            <div v-if="addresses.length === 0" class="text-center py-4">
+              <v-icon size="48" color="grey">mdi-map-marker-outline</v-icon>
+              <p class="text-grey mt-2">Aucune adresse enregistrée</p>
+            </div>
+            
+            <v-list v-else>
               <v-list-item
                 v-for="address in addresses"
                 :key="address.id"
+                class="address-item"
               >
                 <v-list-item-title>{{ address.firstName }} {{ address.lastName }}</v-list-item-title>
                 <v-list-item-subtitle>
                   {{ address.street }}, {{ address.city }} {{ address.zipCode }}
                 </v-list-item-subtitle>
                 <template v-slot:append>
-                  <v-btn icon @click="editAddress(address)">
+                  <v-btn
+                    icon
+                    size="small"
+                    @click="editAddress(address)"
+                  >
                     <v-icon>mdi-pencil</v-icon>
-                  </v-btn>
-                  <v-btn icon @click="deleteAddress(address.id)">
-                    <v-icon>mdi-delete</v-icon>
                   </v-btn>
                 </template>
               </v-list-item>
             </v-list>
           </v-card-text>
+          <v-card-actions>
+            <v-btn 
+              color="primary" 
+              variant="outlined"
+              @click="addAddress"
+            >
+              Ajouter une adresse
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Statistiques -->
+    <v-row class="mt-6">
+      <v-col cols="12">
+        <h2 class="text-h5 mb-4">Mes Statistiques</h2>
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <v-card class="text-center pa-4">
+          <v-icon size="48" color="primary" class="mb-2">mdi-package-variant</v-icon>
+          <h3 class="text-h6">Produits vus</h3>
+          <p class="text-h4">{{ stats.productsViewed }}</p>
+        </v-card>
+      </v-col>
+      
+      <v-col cols="12" sm="6" md="3">
+        <v-card class="text-center pa-4">
+          <v-icon size="48" color="success" class="mb-2">mdi-cart</v-icon>
+          <h3 class="text-h6">Articles achetés</h3>
+          <p class="text-h4">{{ stats.itemsPurchased }}</p>
+        </v-card>
+      </v-col>
+      
+      <v-col cols="12" sm="6" md="3">
+        <v-card class="text-center pa-4">
+          <v-icon size="48" color="info" class="mb-2">mdi-clipboard-list</v-icon>
+          <h3 class="text-h6">Commandes</h3>
+          <p class="text-h4">{{ stats.totalOrders }}</p>
+        </v-card>
+      </v-col>
+      
+      <v-col cols="12" sm="6" md="3">
+        <v-card class="text-center pa-4">
+          <v-icon size="48" color="warning" class="mb-2">mdi-star</v-icon>
+          <h3 class="text-h6">Avis donnés</h3>
+          <p class="text-h4">{{ stats.reviewsGiven }}</p>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Préférences -->
+    <v-row class="mt-6">
+      <v-col cols="12">
+        <v-card>
+          <v-card-title>
+            <v-icon class="mr-2">mdi-cog</v-icon>
+            Préférences
+          </v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col cols="12" md="6">
+                <h3 class="text-h6 mb-3">Notifications</h3>
+                <v-switch
+                  v-model="preferences.emailNotifications"
+                  label="Notifications par email"
+                  color="primary"
+                />
+                <v-switch
+                  v-model="preferences.smsNotifications"
+                  label="Notifications SMS"
+                  color="primary"
+                />
+                <v-switch
+                  v-model="preferences.pushNotifications"
+                  label="Notifications push"
+                  color="primary"
+                />
+              </v-col>
+              
+              <v-col cols="12" md="6">
+                <h3 class="text-h6 mb-3">Préférences de recherche</h3>
+                <v-select
+                  v-model="preferences.defaultSort"
+                  label="Tri par défaut"
+                  :items="sortOptions"
+                  variant="outlined"
+                />
+                <v-select
+                  v-model="preferences.itemsPerPage"
+                  label="Articles par page"
+                  :items="itemsPerPageOptions"
+                  variant="outlined"
+                />
+              </v-col>
+            </v-row>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn 
+              color="primary" 
+              @click="savePreferences"
+              :loading="saving"
+            >
+              Sauvegarder les préférences
+            </v-btn>
+          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
 
     <!-- Dialog pour ajouter/modifier une adresse -->
-    <v-dialog v-model="showAddAddress" max-width="600">
+    <v-dialog v-model="addressDialog" max-width="600">
       <v-card>
         <v-card-title>
           {{ editingAddress ? 'Modifier l\'adresse' : 'Ajouter une adresse' }}
@@ -120,16 +221,16 @@
                 <v-text-field
                   v-model="newAddress.firstName"
                   label="Prénom"
+                  variant="outlined"
                   :rules="nameRules"
-                  required
                 />
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="newAddress.lastName"
                   label="Nom"
+                  variant="outlined"
                   :rules="nameRules"
-                  required
                 />
               </v-col>
             </v-row>
@@ -137,8 +238,8 @@
             <v-text-field
               v-model="newAddress.street"
               label="Adresse"
+              variant="outlined"
               :rules="streetRules"
-              required
             />
             
             <v-row>
@@ -146,16 +247,16 @@
                 <v-text-field
                   v-model="newAddress.city"
                   label="Ville"
+                  variant="outlined"
                   :rules="cityRules"
-                  required
                 />
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="newAddress.zipCode"
                   label="Code postal"
+                  variant="outlined"
                   :rules="zipRules"
-                  required
                 />
               </v-col>
             </v-row>
@@ -163,17 +264,21 @@
             <v-text-field
               v-model="newAddress.mobile"
               label="Téléphone"
+              variant="outlined"
               :rules="phoneRules"
-              required
             />
           </v-form>
         </v-card-text>
         <v-card-actions>
-          <v-btn variant="outlined" @click="showAddAddress = false">
+          <v-btn variant="outlined" @click="addressDialog = false">
             Annuler
           </v-btn>
           <v-spacer />
-          <v-btn color="primary" @click="saveAddress" :loading="addressLoading">
+          <v-btn 
+            color="primary" 
+            @click="saveAddress"
+            :loading="saving"
+          >
             {{ editingAddress ? 'Modifier' : 'Ajouter' }}
           </v-btn>
         </v-card-actions>
@@ -185,21 +290,36 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useOrderStore } from '@/stores/orders'
 
 const authStore = useAuthStore()
+const orderStore = useOrderStore()
 
-const profile = ref({
+const userProfile = ref({
   fullName: '',
   email: '',
-  mobile: ''
+  phone: '',
+  bio: ''
 })
 
-const loading = ref(false)
 const addresses = ref([])
-const showAddAddress = ref(false)
-const editingAddress = ref(null)
-const addressLoading = ref(false)
+const stats = ref({
+  productsViewed: 0,
+  itemsPurchased: 0,
+  totalOrders: 0,
+  reviewsGiven: 0
+})
 
+const preferences = ref({
+  emailNotifications: true,
+  smsNotifications: false,
+  pushNotifications: true,
+  defaultSort: 'createdAt',
+  itemsPerPage: 12
+})
+
+const addressDialog = ref(false)
+const editingAddress = ref(false)
 const newAddress = ref({
   firstName: '',
   lastName: '',
@@ -209,12 +329,23 @@ const newAddress = ref({
   mobile: ''
 })
 
-const stats = ref({
-  totalOrders: 0,
-  totalSpent: 0,
-  memberSince: ''
-})
+const updating = ref(false)
+const saving = ref(false)
 
+const sortOptions = ref([
+  { title: 'Nouveautés', value: 'createdAt' },
+  { title: 'Prix croissant', value: 'sellingPrice' },
+  { title: 'Prix décroissant', value: 'sellingPrice' },
+  { title: 'Nom', value: 'title' }
+])
+
+const itemsPerPageOptions = ref([
+  { title: '12 articles', value: 12 },
+  { title: '24 articles', value: 24 },
+  { title: '48 articles', value: 48 }
+])
+
+// Règles de validation
 const nameRules = [
   v => !!v || 'Champ requis',
   v => v.length >= 2 || 'Minimum 2 caractères'
@@ -244,74 +375,108 @@ const zipRules = [
 ]
 
 const updateProfile = async () => {
-  loading.value = true
+  updating.value = true
   try {
-    // Mettre à jour le profil
-    // await userService.updateProfile(profile.value)
-    console.log('Profil mis à jour')
+    // Appel API pour mettre à jour le profil
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Mettre à jour le store d'authentification
+    authStore.user = { ...authStore.user, ...userProfile.value }
   } catch (error) {
     console.error('Erreur lors de la mise à jour du profil:', error)
   } finally {
-    loading.value = false
+    updating.value = false
   }
+}
+
+const addAddress = () => {
+  editingAddress.value = false
+  newAddress.value = {
+    firstName: '',
+    lastName: '',
+    street: '',
+    city: '',
+    zipCode: '',
+    mobile: ''
+  }
+  addressDialog.value = true
 }
 
 const editAddress = (address) => {
-  editingAddress.value = address
+  editingAddress.value = true
   newAddress.value = { ...address }
-  showAddAddress.value = true
-}
-
-const deleteAddress = async (addressId) => {
-  try {
-    // await addressService.deleteAddress(addressId)
-    addresses.value = addresses.value.filter(addr => addr.id !== addressId)
-  } catch (error) {
-    console.error('Erreur lors de la suppression de l\'adresse:', error)
-  }
+  addressDialog.value = true
 }
 
 const saveAddress = async () => {
-  addressLoading.value = true
+  saving.value = true
   try {
+    // Appel API pour sauvegarder l'adresse
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
     if (editingAddress.value) {
-      // Modifier l'adresse existante
-      const index = addresses.value.findIndex(addr => addr.id === editingAddress.value.id)
+      const index = addresses.value.findIndex(addr => addr.id === newAddress.value.id)
       if (index !== -1) {
         addresses.value[index] = { ...newAddress.value }
       }
     } else {
-      // Ajouter une nouvelle adresse
-      addresses.value.push({ ...newAddress.value, id: Date.now() })
+      addresses.value.push({
+        ...newAddress.value,
+        id: Date.now() // ID temporaire
+      })
     }
     
-    showAddAddress.value = false
-    editingAddress.value = null
-    newAddress.value = {
-      firstName: '',
-      lastName: '',
-      street: '',
-      city: '',
-      zipCode: '',
-      mobile: ''
-    }
+    addressDialog.value = false
   } catch (error) {
     console.error('Erreur lors de la sauvegarde de l\'adresse:', error)
   } finally {
-    addressLoading.value = false
+    saving.value = false
   }
 }
 
-onMounted(() => {
-  // Charger les données du profil
-  if (authStore.user) {
-    profile.value = { ...authStore.user }
+const savePreferences = async () => {
+  saving.value = true
+  try {
+    // Appel API pour sauvegarder les préférences
+    await new Promise(resolve => setTimeout(resolve, 1000))
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde des préférences:', error)
+  } finally {
+    saving.value = false
   }
-  
-  // Charger les adresses
-  // addresses.value = await addressService.getAddresses()
-  
-  // Calculer les statistiques
-  stats.value.memberSince = new Date().getFullYear()
+}
+
+onMounted(async () => {
+  try {
+    // Charger les données du profil
+    if (authStore.user) {
+      userProfile.value = {
+        fullName: authStore.user.fullName || '',
+        email: authStore.user.email || '',
+        phone: authStore.user.phone || '',
+        bio: authStore.user.bio || ''
+      }
+    }
+    
+    // Charger les commandes pour les statistiques
+    await orderStore.fetchUserOrders()
+    stats.value.totalOrders = orderStore.orders.length
+    
+    // Simuler d'autres statistiques
+    stats.value.productsViewed = Math.floor(Math.random() * 100)
+    stats.value.itemsPurchased = Math.floor(Math.random() * 50)
+    stats.value.reviewsGiven = Math.floor(Math.random() * 20)
+  } catch (error) {
+    console.error('Erreur lors du chargement des données:', error)
+  }
 })
 </script>
+
+<style scoped>
+.address-item {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.address-item:last-child {
+  border-bottom: none;
+}
+</style>

@@ -217,6 +217,38 @@ public class SupplyOrderServiceImpl implements SupplyOrderService {
 
 
 
+    @Override
+    public List<Product> getSupplyOrdersByCurrentSupplierExpedier() {
+        try {
+            // Récupérer l'utilisateur connecté
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            System.out.println("🔍 Recherche des commandes pour le fournisseur: " + email);
+
+            // Trouver le fournisseur par email
+            Supplier supplier = supplierRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé pour l'email: " + email));
+
+            //System.out.println("✅ Fournisseur trouvé: " + supplier.getBusinessName() + " (ID: " + supplier.getId() + ")");
+
+            // Récupérer les commandes du fournisseur
+            List<Product> allOrders = productRepository.findApprovedAndPendingProductsBySupplierExpedier(supplier.getId());
+            System.out.println("📦 Nombre total de commandes trouvées: " + allOrders.size());
+
+
+
+            return allOrders;
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des commandes du fournisseur: " + e.getMessage());
+            e.printStackTrace();
+            return List.of(); // Retourner une liste vide en cas d'erreur
+        }
+    }
+
+
+
+
+
 
 
 

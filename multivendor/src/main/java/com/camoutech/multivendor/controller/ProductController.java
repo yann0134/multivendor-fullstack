@@ -1,11 +1,7 @@
 package com.camoutech.multivendor.controller;
 
 import com.camoutech.multivendor.exceptions.ProductException;
-import com.camoutech.multivendor.model.Product;
-import com.camoutech.multivendor.model.ProductCategory;
-import com.camoutech.multivendor.model.ProductSubCategory;
-import com.camoutech.multivendor.model.Supplier;
-import com.camoutech.multivendor.model.User;
+import com.camoutech.multivendor.model.*;
 import com.camoutech.multivendor.repository.ProductRepository;
 import com.camoutech.multivendor.repository.ProductCategoryRepository;
 import com.camoutech.multivendor.repository.ProductSubCategoryRepository;
@@ -13,7 +9,13 @@ import com.camoutech.multivendor.repository.UserRepository;
 import com.camoutech.multivendor.repository.SupplierRepository;
 import com.camoutech.multivendor.repository.SupplyOrderRepository;
 import com.camoutech.multivendor.request.CreateProductRequest;
-import com.camoutech.multivendor.service.impl.ProductServiceImpl;
+import com.camoutech.multivendor.request.UpdateShipmentStatusRequest;
+import com.camoutech.multivendor.request.UpdateReceptionStatusRequest;
+import com.camoutech.multivendor.request.SupplierProfileUpdateRequest;
+import com.camoutech.multivendor.service.ProductService;
+import com.camoutech.multivendor.service.DeliveredProductService;
+import com.camoutech.multivendor.service.SupplierDashboardService;
+import com.camoutech.multivendor.model.SupplierDashboardStats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +29,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -40,13 +43,15 @@ public class ProductController {
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final ProductSubCategoryRepository productSubCategoryRepository;
-    private final ProductServiceImpl productService;
+    private final ProductService productService;
     private final SupplierRepository supplierRepository;
     private final UserRepository userRepository;
     private final SupplyOrderRepository supplyOrderRepository;
+    // private final DeliveredProductService deliveredProductService;
+    private final SupplierDashboardService supplierDashboardService;
 
     /**
-     * Récupérer tous les produits avec pagination
+     * Récupérer tous les produits avec pagination (pour les clients)
      */
     @GetMapping
     public ResponseEntity<Page<Product>> getAllProducts(
@@ -59,13 +64,13 @@ public class ProductController {
             Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Product> products = productRepository.findAll(pageable);
+        Page<Product> products = productRepository.findCustomerAvailableProducts(pageable);
         
         return ResponseEntity.ok(products);
     }
 
     /**
-     * Récupérer les produits par catégorie
+     * Récupérer les produits par catégorie (pour les clients)
      */
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<Page<Product>> getProductsByCategory(
@@ -74,13 +79,13 @@ public class ProductController {
             @RequestParam(defaultValue = "12") int size) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Product> products = productRepository.findByCategoryId(categoryId, pageable);
+        Page<Product> products = productRepository.findCustomerProductsByCategory(categoryId, pageable);
         
         return ResponseEntity.ok(products);
     }
 
     /**
-     * Récupérer les produits par sous-catégorie
+     * Récupérer les produits par sous-catégorie (pour les clients)
      */
     @GetMapping("/subcategory/{subCategoryId}")
     public ResponseEntity<Page<Product>> getProductsBySubCategory(
@@ -89,13 +94,13 @@ public class ProductController {
             @RequestParam(defaultValue = "12") int size) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Product> products = productRepository.findBySubCategoryId(subCategoryId, pageable);
+        Page<Product> products = productRepository.findCustomerProductsBySubCategory(subCategoryId, pageable);
         
         return ResponseEntity.ok(products);
     }
 
     /**
-     * Récupérer les produits par type (ANIMAL ou VEGETAL)
+     * Récupérer les produits par type (ANIMAL ou VEGETAL) (pour les clients)
      */
     @GetMapping("/type/{type}")
     public ResponseEntity<Page<Product>> getProductsByType(
@@ -104,13 +109,13 @@ public class ProductController {
             @RequestParam(defaultValue = "12") int size) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Product> products = productRepository.findByCategoryType(type, pageable);
+        Page<Product> products = productRepository.findCustomerProductsByType(type, pageable);
         
         return ResponseEntity.ok(products);
     }
 
     /**
-     * Rechercher des produits par nom
+     * Rechercher des produits par nom (pour les clients)
      */
     @GetMapping("/search")
     public ResponseEntity<Page<Product>> searchProducts(
@@ -119,13 +124,13 @@ public class ProductController {
             @RequestParam(defaultValue = "12") int size) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Product> products = productRepository.findByTitleContainingIgnoreCase(query, pageable);
+        Page<Product> products = productRepository.searchCustomerProducts(query, pageable);
         
         return ResponseEntity.ok(products);
     }
 
     /**
-     * Récupérer les produits bio
+     * Récupérer les produits bio (pour les clients)
      */
     @GetMapping("/organic")
     public ResponseEntity<Page<Product>> getOrganicProducts(
@@ -133,13 +138,13 @@ public class ProductController {
             @RequestParam(defaultValue = "12") int size) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Product> products = productRepository.findByOrganicTrue(pageable);
+        Page<Product> products = productRepository.findCustomerOrganicProducts(pageable);
         
         return ResponseEntity.ok(products);
     }
 
     /**
-     * Récupérer les produits locaux
+     * Récupérer les produits locaux (pour les clients)
      */
     @GetMapping("/local")
     public ResponseEntity<Page<Product>> getLocalProducts(
@@ -147,7 +152,7 @@ public class ProductController {
             @RequestParam(defaultValue = "12") int size) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Product> products = productRepository.findByLocalTrue(pageable);
+        Page<Product> products = productRepository.findCustomerLocalProducts(pageable);
         
         return ResponseEntity.ok(products);
     }
@@ -163,20 +168,20 @@ public class ProductController {
     }
 
     /**
-     * Récupérer les produits en vedette
+     * Récupérer les produits en vedette (pour les clients)
      */
     @GetMapping("/featured")
     public ResponseEntity<List<Product>> getFeaturedProducts() {
-        List<Product> products = productRepository.findTop8ByOrderByNumRatingsDesc();
+        List<Product> products = productRepository.findCustomerFeaturedProducts();
         return ResponseEntity.ok(products);
     }
 
     /**
-     * Récupérer les nouveaux produits
+     * Récupérer les nouveaux produits (pour les clients)
      */
     @GetMapping("/new")
     public ResponseEntity<List<Product>> getNewProducts() {
-        List<Product> products = productRepository.findTop8ByOrderByCreatedAtDesc();
+        List<Product> products = productRepository.findCustomerNewProducts();
         return ResponseEntity.ok(products);
     }
 
@@ -827,11 +832,700 @@ public class ProductController {
         }
     }
     
+    /**
+     * Récupérer les produits expédiés par le fournisseur et acceptés par l'entrepôt
+     */
+    @GetMapping("/delivered-and-received/supplier")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<List<Product>> getDeliveredAndReceivedProductsBySupplier() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            
+            System.out.println("🔍 Récupération des produits livrés et reçus pour le fournisseur: " + email);
+            
+            Supplier supplier = supplierRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé pour l'email: " + email));
+            
+            System.out.println("✅ Fournisseur trouvé: " + supplier.getSupplierName() + " (ID: " + supplier.getId() + ")");
+            
+            List<Product> products = productRepository.findApprovedAndPendingProductsBySupplierRecu(supplier.getId());
+            
+            System.out.println("📦 Produits livrés et reçus trouvés: " + products.size());
+            
+            for (Product product : products) {
+                System.out.println("  📦 Produit: " + product.getTitle() + 
+                    " - Statut: " + product.getStatus() + 
+                    " - Envoi: " + product.getShipmentStatus() + 
+                    " - Réception: " + product.getReceptionStatus());
+            }
+            
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des produits livrés et reçus: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Récupérer tous les produits expédiés et acceptés par l'entrepôt (Admin)
+     */
+    @GetMapping("/delivered-and-received/admin")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<List<Product>> getAllDeliveredAndReceivedProducts() {
+        try {
+            System.out.println("🔍 Récupération de tous les produits livrés et reçus (Admin)");
+            
+            // Récupérer tous les produits avec les statuts appropriés
+            List<Product> allProducts = productRepository.findAll();
+            List<Product> deliveredAndReceivedProducts = allProducts.stream()
+                    .filter(product -> 
+                        product.getStatus() == Product.ProductStatus.APPROVED &&
+                        product.getShipmentStatus() == Product.ShipmentStatus.SHIPPED &&
+                        product.getReceptionStatus() == Product.ReceptionStatus.RECEIVED
+                    )
+                    .toList();
+            
+            System.out.println("📦 Total des produits livrés et reçus: " + deliveredAndReceivedProducts.size());
+            
+            for (Product product : deliveredAndReceivedProducts) {
+                System.out.println("  📦 Produit: " + product.getTitle() + 
+                    " - Fournisseur: " + (product.getSupplier() != null ? product.getSupplier().getSupplierName() : "N/A") +
+                    " - Statut: " + product.getStatus() + 
+                    " - Envoi: " + product.getShipmentStatus() + 
+                    " - Réception: " + product.getReceptionStatus());
+            }
+            
+            return ResponseEntity.ok(deliveredAndReceivedProducts);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération de tous les produits livrés et reçus: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Récupérer les statistiques des produits livrés et reçus
+     */
+    @GetMapping("/delivered-and-received/stats")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<DeliveredProductStats> getDeliveredProductStats() {
+        try {
+            System.out.println("📊 Récupération des statistiques des produits livrés et reçus");
+            
+            // TODO: Réactiver le service DeliveredProductService
+            // DeliveredProductStats stats = deliveredProductService.getDeliveredProductStats(null);
+            
+            // Créer des statistiques temporaires
+            DeliveredProductStats stats = new DeliveredProductStats(0, 0, 0);
+            
+            System.out.println("📊 Statistiques récupérées:");
+            System.out.println("  - Total produits: " + stats.getTotalDeliveredProducts());
+            System.out.println("  - Valeur totale: " + stats.getTotalValue());
+            System.out.println("  - Quantité totale: " + stats.getTotalQuantity());
+            
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des statistiques: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Changer le statut d'expédition d'un produit (Fournisseur)
+     */
+    @PutMapping("/{productId}/shipment-status")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<Product> updateProductShipmentStatus(
+            @PathVariable Long productId,
+            @RequestBody UpdateShipmentStatusRequest request) {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            
+            System.out.println("🚚 Mise à jour du statut d'expédition pour le produit ID: " + productId);
+            System.out.println("📧 Fournisseur: " + email);
+            System.out.println("📦 Nouveau statut: " + request.getStatus());
+            
+            // Vérifier que le produit existe
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new RuntimeException("Produit non trouvé avec l'ID: " + productId));
+            
+            // Vérifier que le produit appartient au fournisseur connecté
+            Supplier supplier = supplierRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé pour l'email: " + email));
+            
+            if (product.getSupplier() == null || !product.getSupplier().getId().equals(supplier.getId())) {
+                System.err.println("❌ Le produit n'appartient pas au fournisseur connecté");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
+            // Vérifier que le produit est approuvé
+            if (product.getStatus() != Product.ProductStatus.APPROVED) {
+                System.err.println("❌ Le produit n'est pas approuvé. Statut actuel: " + product.getStatus());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            
+            // Vérifier que le statut actuel permet le changement
+            if (product.getShipmentStatus() == Product.ShipmentStatus.SHIPPED && 
+                request.getStatus() == Product.ShipmentStatus.NOT_SHIPPED) {
+                System.err.println("❌ Impossible de revenir au statut 'Non expédié' depuis 'Expédié'");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            
+            // Mettre à jour le statut d'expédition
+            Product.ShipmentStatus newStatus = Product.ShipmentStatus.valueOf(request.getStatus().toString());
+            product.setShipmentStatus(newStatus);
+            
+            // Si le produit est expédié, mettre à jour la date de livraison
+            if (newStatus == Product.ShipmentStatus.SHIPPED) {
+                java.time.LocalDateTime deliveryDate = java.time.LocalDateTime.now();
+                product.setDeliveryDate(deliveryDate);
+                product.setUpdatedAt(deliveryDate);
+                System.out.println("📦 Date de livraison définie: " + deliveryDate);
+                System.out.println("🚚 Produit expédié le: " + deliveryDate.toLocalDate());
+            }
+            
+            // Sauvegarder les modifications
+            Product updatedProduct = productRepository.save(product);
+            
+            System.out.println("✅ Statut d'expédition mis à jour avec succès:");
+            System.out.println("  📦 Produit: " + updatedProduct.getTitle());
+            System.out.println("  🚚 Ancien statut: " + product.getShipmentStatus());
+            System.out.println("  🚚 Nouveau statut: " + updatedProduct.getShipmentStatus());
+            System.out.println("  👤 Fournisseur: " + supplier.getSupplierName());
+            
+            return ResponseEntity.ok(updatedProduct);
+            
+        } catch (RuntimeException e) {
+            System.err.println("❌ Erreur de validation: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la mise à jour du statut d'expédition: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Lister les produits en attente de réception par l'entrepôt
+     * (Produits APPROVED et SHIPPED)
+     */
+    @GetMapping("/pending-reception")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<List<Product>> getProductsPendingReception() {
+        try {
+            System.out.println("📦 Récupération des produits en attente de réception");
+            
+            List<Product> products = productRepository.findProductsPendingReception();
+            
+            System.out.println("✅ " + products.size() + " produits trouvés en attente de réception");
+            
+            // Debug: Afficher les informations du fournisseur pour chaque produit
+            for (Product product : products) {
+                System.out.println("🔍 Debug Produit ID: " + product.getId());
+                System.out.println("  - Titre: " + product.getTitle());
+                if (product.getSupplier() != null) {
+                    System.out.println("  - Fournisseur ID: " + product.getSupplier().getId());
+                    System.out.println("  - Fournisseur Email: " + product.getSupplier().getEmail());
+                    System.out.println("  - Fournisseur Nom: " + product.getSupplier().getSupplierName());
+                    if (product.getSupplier().getPickupAddress() != null) {
+                        System.out.println("  - Adresse: " + product.getSupplier().getPickupAddress().getAddress());
+                        System.out.println("  - Ville: " + product.getSupplier().getPickupAddress().getCity());
+                    }
+                    if (product.getSupplier().getBusinessDetails() != null) {
+                        System.out.println("  - Business Address: " + product.getSupplier().getBusinessDetails().getBusinessAddress());
+                    }
+                } else {
+                    System.out.println("  - ❌ Fournisseur NULL");
+                }
+                System.out.println("  ---");
+            }
+            
+            return ResponseEntity.ok(products);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des produits en attente de réception: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Debug: Vérifier les données d'un fournisseur
+     */
+    @GetMapping("/debug/supplier/{supplierId}")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<Supplier> debugSupplier(@PathVariable Long supplierId) {
+        try {
+            System.out.println("🔍 Debug Fournisseur ID: " + supplierId);
+            
+            Supplier supplier = supplierRepository.findById(supplierId).orElse(null);
+            
+            if (supplier != null) {
+                System.out.println("✅ Fournisseur trouvé:");
+                System.out.println("  - ID: " + supplier.getId());
+                System.out.println("  - Email: " + supplier.getEmail());
+                System.out.println("  - Nom: " + supplier.getSupplierName());
+                System.out.println("  - Mobile: " + supplier.getMobile());
+                
+                if (supplier.getPickupAddress() != null) {
+                    System.out.println("  - Adresse pickup: " + supplier.getPickupAddress().getAddress());
+                    System.out.println("  - Ville pickup: " + supplier.getPickupAddress().getCity());
+                } else {
+                    System.out.println("  - ❌ Adresse pickup NULL");
+                }
+                
+                if (supplier.getBusinessDetails() != null) {
+                    System.out.println("  - Business Name: " + supplier.getBusinessDetails().getBusinessName());
+                    System.out.println("  - Business Address: " + supplier.getBusinessDetails().getBusinessAddress());
+                } else {
+                    System.out.println("  - ❌ Business Details NULL");
+                }
+            } else {
+                System.out.println("❌ Fournisseur non trouvé avec l'ID: " + supplierId);
+            }
+            
+            return ResponseEntity.ok(supplier);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors du debug du fournisseur: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Mettre à jour le profil du fournisseur connecté
+     */
+    @PutMapping("/supplier/update-profile")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<Supplier> updateSupplierProfile(@RequestBody SupplierProfileUpdateRequest request) {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            
+            System.out.println("👤 Mise à jour du profil fournisseur: " + email);
+            
+            // Récupérer le fournisseur connecté
+            Supplier supplier = supplierRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé pour l'email: " + email));
+            
+            // Mettre à jour les informations de base
+            if (request.getSupplierName() != null) {
+                supplier.setSupplierName(request.getSupplierName());
+            }
+            if (request.getMobile() != null) {
+                supplier.setMobile(request.getMobile());
+            }
+            
+            // Mettre à jour l'adresse pickup
+            if (request.getPickupAddress() != null) {
+                if (supplier.getPickupAddress() == null) {
+                    supplier.setPickupAddress(new Address());
+                }
+                Address pickupAddress = supplier.getPickupAddress();
+                if (request.getPickupAddress().getAddress() != null) {
+                    pickupAddress.setAddress(request.getPickupAddress().getAddress());
+                }
+                if (request.getPickupAddress().getCity() != null) {
+                    pickupAddress.setCity(request.getPickupAddress().getCity());
+                }
+                if (request.getPickupAddress().getState() != null) {
+                    pickupAddress.setState(request.getPickupAddress().getState());
+                }
+                if (request.getPickupAddress().getPinCode() != null) {
+                    pickupAddress.setPinCode(request.getPickupAddress().getPinCode());
+                }
+            }
+            
+            // Mettre à jour les détails business
+            if (request.getBusinessDetails() != null) {
+                if (supplier.getBusinessDetails() == null) {
+                    supplier.setBusinessDetails(new BusinessDetails());
+                }
+                BusinessDetails businessDetails = supplier.getBusinessDetails();
+                if (request.getBusinessDetails().getBusinessName() != null) {
+                    businessDetails.setBusinessName(request.getBusinessDetails().getBusinessName());
+                }
+                if (request.getBusinessDetails().getBusinessAddress() != null) {
+                    businessDetails.setBusinessAddress(request.getBusinessDetails().getBusinessAddress());
+                }
+                if (request.getBusinessDetails().getBusinessEmail() != null) {
+                    businessDetails.setBusinessEmail(request.getBusinessDetails().getBusinessEmail());
+                }
+                if (request.getBusinessDetails().getBusinessMobile() != null) {
+                    businessDetails.setBusinessMobile(request.getBusinessDetails().getBusinessMobile());
+                }
+            }
+            
+            // Sauvegarder les modifications
+            Supplier updatedSupplier = supplierRepository.save(supplier);
+            
+            System.out.println("✅ Profil fournisseur mis à jour avec succès:");
+            System.out.println("  - Nom: " + updatedSupplier.getSupplierName());
+            System.out.println("  - Mobile: " + updatedSupplier.getMobile());
+            if (updatedSupplier.getPickupAddress() != null) {
+                System.out.println("  - Adresse: " + updatedSupplier.getPickupAddress().getAddress());
+                System.out.println("  - Ville: " + updatedSupplier.getPickupAddress().getCity());
+            }
+            if (updatedSupplier.getBusinessDetails() != null) {
+                System.out.println("  - Business: " + updatedSupplier.getBusinessDetails().getBusinessName());
+            }
+            
+            return ResponseEntity.ok(updatedSupplier);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la mise à jour du profil: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Corriger automatiquement les données du fournisseur ID 1
+     */
+    @PostMapping("/debug/fix-supplier-data")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<String> fixSupplierData() {
+        try {
+            System.out.println("🔧 Correction des données du fournisseur...");
+            
+            // Récupérer le fournisseur ID 1
+            Supplier supplier = supplierRepository.findById(1L).orElse(null);
+            
+            if (supplier == null) {
+                return ResponseEntity.badRequest().body("Fournisseur ID 1 non trouvé");
+            }
+            
+            System.out.println("📝 Fournisseur trouvé: " + supplier.getSupplierName() + " (" + supplier.getEmail() + ")");
+            
+            // Créer et assigner l'adresse pickup si elle n'existe pas
+            if (supplier.getPickupAddress() == null) {
+                Address pickupAddress = new Address();
+                pickupAddress.setAddress("Douala, Cameroun");
+                pickupAddress.setCity("Douala");
+                pickupAddress.setState("Littoral");
+                pickupAddress.setPinCode("00000");
+                supplier.setPickupAddress(pickupAddress);
+                System.out.println("✅ Adresse pickup créée");
+            }
+            
+            // Créer et assigner les détails business si ils n'existent pas
+            if (supplier.getBusinessDetails() == null) {
+                BusinessDetails businessDetails = new BusinessDetails();
+                businessDetails.setBusinessName("Ferme " + supplier.getSupplierName());
+                businessDetails.setBusinessAddress("Douala, Cameroun");
+                businessDetails.setBusinessEmail(supplier.getEmail());
+                businessDetails.setBusinessMobile(supplier.getMobile());
+                supplier.setBusinessDetails(businessDetails);
+                System.out.println("✅ Détails business créés");
+            }
+            
+            // Sauvegarder les modifications
+            Supplier updatedSupplier = supplierRepository.save(supplier);
+            
+            System.out.println("✅ Fournisseur mis à jour avec succès !");
+            System.out.println("  - Nom: " + updatedSupplier.getSupplierName());
+            System.out.println("  - Email: " + updatedSupplier.getEmail());
+            if (updatedSupplier.getPickupAddress() != null) {
+                System.out.println("  - Adresse: " + updatedSupplier.getPickupAddress().getAddress());
+                System.out.println("  - Ville: " + updatedSupplier.getPickupAddress().getCity());
+            }
+            if (updatedSupplier.getBusinessDetails() != null) {
+                System.out.println("  - Business: " + updatedSupplier.getBusinessDetails().getBusinessName());
+            }
+            
+            return ResponseEntity.ok("✅ Données du fournisseur corrigées ! Nom: " + updatedSupplier.getSupplierName() + ", Localisation: " + updatedSupplier.getPickupAddress().getCity());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la correction: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Mettre à jour automatiquement le fournisseur ID 1 (fabien)
+     */
+    @PostMapping("/debug/fix-supplier-info")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<String> fixSupplierInfo() {
+        try {
+            System.out.println("🔧 Correction automatique des informations du fournisseur...");
+            
+            // Récupérer le fournisseur ID 1 (fabien)
+            Supplier supplier = supplierRepository.findById(1L).orElse(null);
+            
+            if (supplier == null) {
+                return ResponseEntity.badRequest().body("Fournisseur ID 1 non trouvé");
+            }
+            
+            System.out.println("📝 Fournisseur trouvé: " + supplier.getSupplierName() + " (" + supplier.getEmail() + ")");
+            
+            // Créer et assigner l'adresse pickup
+            Address pickupAddress = new Address();
+            pickupAddress.setAddress("Douala, Cameroun");
+            pickupAddress.setCity("Douala");
+            pickupAddress.setState("Littoral");
+            pickupAddress.setPinCode("00000");
+            supplier.setPickupAddress(pickupAddress);
+            
+            // Créer et assigner les détails business
+            BusinessDetails businessDetails = new BusinessDetails();
+            businessDetails.setBusinessName("Ferme " + supplier.getSupplierName());
+            businessDetails.setBusinessAddress("Douala, Cameroun");
+            businessDetails.setBusinessEmail(supplier.getEmail());
+            supplier.setBusinessDetails(businessDetails);
+            
+            // Sauvegarder
+            Supplier updatedSupplier = supplierRepository.save(supplier);
+            
+            System.out.println("✅ Fournisseur mis à jour avec succès !");
+            System.out.println("  - Nom: " + updatedSupplier.getSupplierName());
+            System.out.println("  - Adresse: " + updatedSupplier.getPickupAddress().getAddress());
+            System.out.println("  - Ville: " + updatedSupplier.getPickupAddress().getCity());
+            System.out.println("  - Business: " + updatedSupplier.getBusinessDetails().getBusinessName());
+            
+            return ResponseEntity.ok("✅ Informations du fournisseur corrigées ! Nom: " + updatedSupplier.getSupplierName() + ", Localisation: " + updatedSupplier.getPickupAddress().getCity());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la correction: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Mettre à jour les informations d'un fournisseur existant
+     */
+    @PutMapping("/debug/update-supplier/{supplierId}")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<String> updateSupplierInfo(@PathVariable Long supplierId) {
+        try {
+            System.out.println("🔧 Mise à jour du fournisseur ID: " + supplierId);
+            
+            Supplier supplier = supplierRepository.findById(supplierId).orElse(null);
+            
+            if (supplier == null) {
+                return ResponseEntity.badRequest().body("Fournisseur non trouvé avec l'ID: " + supplierId);
+            }
+            
+            // Mettre à jour l'adresse pickup
+            if (supplier.getPickupAddress() == null) {
+                supplier.setPickupAddress(new Address());
+            }
+            supplier.getPickupAddress().setAddress("Douala, Cameroun");
+            supplier.getPickupAddress().setCity("Douala");
+            supplier.getPickupAddress().setState("Littoral");
+            supplier.getPickupAddress().setPinCode("00000");
+            
+            // Mettre à jour les détails business
+            if (supplier.getBusinessDetails() == null) {
+                supplier.setBusinessDetails(new BusinessDetails());
+            }
+            supplier.getBusinessDetails().setBusinessName("Ferme " + supplier.getSupplierName());
+            supplier.getBusinessDetails().setBusinessAddress("Douala, Cameroun");
+            supplier.getBusinessDetails().setBusinessEmail(supplier.getEmail());
+            
+            // Sauvegarder les modifications
+            Supplier updatedSupplier = supplierRepository.save(supplier);
+            
+            System.out.println("✅ Fournisseur mis à jour:");
+            System.out.println("  - Nom: " + updatedSupplier.getSupplierName());
+            System.out.println("  - Adresse: " + updatedSupplier.getPickupAddress().getAddress());
+            System.out.println("  - Ville: " + updatedSupplier.getPickupAddress().getCity());
+            System.out.println("  - Business: " + updatedSupplier.getBusinessDetails().getBusinessName());
+            
+            return ResponseEntity.ok("Fournisseur mis à jour avec succès ! ID: " + updatedSupplier.getId());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la mise à jour du fournisseur: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Créer des données de test avec des fournisseurs complets
+     */
+    @PostMapping("/debug/create-test-data")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<String> createTestData() {
+        try {
+            System.out.println("🧪 Création de données de test...");
+            
+            // Créer un fournisseur avec des données complètes
+            Supplier testSupplier = new Supplier();
+            testSupplier.setEmail("test-supplier@example.com");
+            testSupplier.setSupplierName("Ferme Test Bio");
+            testSupplier.setMobile("+237 6XX XX XX XX");
+            
+            // Créer une adresse
+            Address address = new Address();
+            address.setAddress("Douala, Cameroun");
+            address.setCity("Douala");
+            address.setState("Littoral");
+            address.setPinCode("00000");
+            testSupplier.setPickupAddress(address);
+            
+            // Créer des détails business
+            BusinessDetails businessDetails = new BusinessDetails();
+            businessDetails.setBusinessName("Ferme Test Bio");
+            businessDetails.setBusinessAddress("Douala, Cameroun");
+            businessDetails.setBusinessEmail("contact@fermetest.com");
+            testSupplier.setBusinessDetails(businessDetails);
+            
+            // Sauvegarder le fournisseur
+            Supplier savedSupplier = supplierRepository.save(testSupplier);
+            System.out.println("✅ Fournisseur créé avec l'ID: " + savedSupplier.getId());
+            
+            // Créer un produit de test
+            Product testProduct = new Product();
+            testProduct.setTitle("Tomates Bio Test");
+            testProduct.setDescription("Tomates biologiques de test");
+            testProduct.setStatus(Product.ProductStatus.APPROVED);
+            testProduct.setShipmentStatus(Product.ShipmentStatus.SHIPPED);
+            testProduct.setReceptionStatus(Product.ReceptionStatus.PENDING);
+            testProduct.setAdminRequestedQuantity(50);
+            testProduct.setSupplierAvailableQuantity(100);
+            testProduct.setSupplierPrice(1500.0);
+            testProduct.setUnit("kg");
+            testProduct.setSupplier(savedSupplier);
+            
+            // Sauvegarder le produit
+            Product savedProduct = productRepository.save(testProduct);
+            System.out.println("✅ Produit créé avec l'ID: " + savedProduct.getId());
+            
+            return ResponseEntity.ok("Données de test créées avec succès ! Fournisseur ID: " + savedSupplier.getId() + ", Produit ID: " + savedProduct.getId());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la création des données de test: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Récupérer les produits reçus par l'entrepôt (pour l'inventaire)
+     */
+    @GetMapping("/received-products")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<List<Product>> getReceivedProducts() {
+        try {
+            System.out.println("🏭 Récupération des produits reçus par l'entrepôt...");
+            List<Product> products = productRepository.findReceivedProducts();
+            System.out.println("📦 Produits reçus trouvés: " + products.size());
+            
+            for (Product product : products) {
+                System.out.println("📦 Produit reçu: " + product.getTitle() + 
+                    " | Statut: " + product.getStatus() + 
+                    " | Expédition: " + product.getShipmentStatus() + 
+                    " | Réception: " + product.getReceptionStatus() +
+                    " | Date réception: " + product.getUpdatedAt());
+            }
+            
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des produits reçus: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Valider la réception d'un produit par l'entrepôt
+     */
+    @PutMapping("/{productId}/reception-status")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<Product> updateProductReceptionStatus(
+            @PathVariable Long productId,
+            @RequestBody UpdateReceptionStatusRequest request) {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            
+            System.out.println("📦 Mise à jour du statut de réception pour le produit ID: " + productId);
+            System.out.println("🏭 Entrepôt: " + email);
+            System.out.println("📋 Nouveau statut: " + request.getStatus());
+            
+            // Vérifier que le produit existe
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new RuntimeException("Produit non trouvé avec l'ID: " + productId));
+            
+            // Vérifier que le produit est en statut SHIPPED
+            if (product.getShipmentStatus() != Product.ShipmentStatus.SHIPPED) {
+                System.err.println("❌ Le produit n'est pas expédié. Statut actuel: " + product.getShipmentStatus());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            
+            // Vérifier que le produit est approuvé
+            if (product.getStatus() != Product.ProductStatus.APPROVED) {
+                System.err.println("❌ Le produit n'est pas approuvé. Statut actuel: " + product.getStatus());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            
+            // Mettre à jour le statut de réception
+            Product.ReceptionStatus newStatus = Product.ReceptionStatus.valueOf(request.getStatus().toString());
+            product.setReceptionStatus(newStatus);
+            
+            // Si la réception est validée, mettre à jour le statut d'envoi et la date de réception
+            if (newStatus == Product.ReceptionStatus.RECEIVED) {
+                product.setShipmentStatus(Product.ShipmentStatus.DELIVERED);
+                // Mettre à jour la date de réception avec la date actuelle
+                java.time.LocalDateTime receptionDate = java.time.LocalDateTime.now();
+                product.setReceivedAt(receptionDate);
+                product.setUpdatedAt(receptionDate);
+                
+                // NE PAS modifier la deliveryDate - elle doit rester la vraie date d'expédition
+                // La deliveryDate est définie lors de l'expédition par le fournisseur
+                // La receivedAt est définie lors de la validation par l'entrepôt
+                
+                System.out.println("📅 Date de réception définie: " + receptionDate);
+                System.out.println("📦 Produit reçu le: " + receptionDate.toLocalDate());
+                System.out.println("🚚 Date de livraison originale: " + product.getDeliveryDate());
+                System.out.println("🏭 Réception confirmée par l'entrepôt le: " + receptionDate.toLocalDate());
+                System.out.println("⏱️ Délai de traitement: " + 
+                    (product.getDeliveryDate() != null ? 
+                        java.time.Duration.between(product.getDeliveryDate(), receptionDate).toMinutes() + " minutes" : 
+                        "Non calculable"));
+            }
+            
+            // Sauvegarder les modifications
+            Product updatedProduct = productRepository.save(product);
+            
+            System.out.println("✅ Statut de réception mis à jour avec succès:");
+            System.out.println("  📦 Produit: " + updatedProduct.getTitle());
+            System.out.println("  📋 Ancien statut: " + product.getReceptionStatus());
+            System.out.println("  📋 Nouveau statut: " + updatedProduct.getReceptionStatus());
+            System.out.println("  🚚 Statut d'envoi: " + updatedProduct.getShipmentStatus());
+            
+            return ResponseEntity.ok(updatedProduct);
+            
+        } catch (RuntimeException e) {
+            System.err.println("❌ Erreur de validation: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la mise à jour du statut de réception: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     // Méthode utilitaire pour calculer le pourcentage de remise
     private int calculateDiscountPercentage(int mrpPrice, int sellingPrice) {
+        // Si le prix MRP est 0 ou négatif, pas de remise
         if (mrpPrice <= 0) {
             return 0;
         }
+        
+        // Si le prix de vente est supérieur au prix MRP, c'est une augmentation
+        if (sellingPrice >= mrpPrice) {
+            return 0; // Pas de remise, prix normal ou augmentation
+        }
+        
         double discount = mrpPrice - sellingPrice;
         double discountPercentage = (discount / mrpPrice) * 100;
         return (int) discountPercentage;
@@ -850,5 +1544,126 @@ public class ProductController {
         public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
         public String getMobile() { return mobile; }
         public void setMobile(String mobile) { this.mobile = mobile; }
+    }
+
+    // ==================== ENDPOINTS TABLEAU DE BORD FOURNISSEUR ====================
+
+    /**
+     * Récupérer les statistiques complètes du tableau de bord du fournisseur
+     */
+    @GetMapping("/supplier/dashboard/stats")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<SupplierDashboardStats> getSupplierDashboardStats() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            
+            System.out.println("📊 Récupération des statistiques du tableau de bord pour: " + email);
+            
+            // Récupérer l'ID du fournisseur à partir de l'email
+            Supplier supplier = supplierRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec l'email: " + email));
+            
+            SupplierDashboardStats stats = supplierDashboardService.getSupplierDashboardStats(supplier.getId());
+            
+            System.out.println("📊 Statistiques récupérées:");
+            System.out.println("  - Total produits: " + stats.getTotalProducts());
+            System.out.println("  - Produits approuvés: " + stats.getApprovedProducts());
+            System.out.println("  - Revenus totaux: " + stats.getTotalRevenue());
+            System.out.println("  - Montant reçu: " + stats.getReceivedAmount());
+            System.out.println("  - Montant en attente: " + stats.getPendingAmount());
+            
+            return ResponseEntity.ok(stats);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des statistiques: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Récupérer les revenus totaux du fournisseur
+     */
+    @GetMapping("/supplier/dashboard/revenue")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<Map<String, Object>> getSupplierRevenue() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            
+            System.out.println("💰 Récupération des revenus pour: " + email);
+            
+            Supplier supplier = supplierRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec l'email: " + email));
+            
+            java.math.BigDecimal totalRevenue = supplierDashboardService.getTotalRevenue(supplier.getId());
+            java.math.BigDecimal receivedAmount = supplierDashboardService.getReceivedAmount(supplier.getId());
+            java.math.BigDecimal pendingAmount = supplierDashboardService.getPendingAmount(supplier.getId());
+            java.math.BigDecimal thisMonthRevenue = supplierDashboardService.getThisMonthRevenue(supplier.getId());
+            java.math.BigDecimal lastMonthRevenue = supplierDashboardService.getLastMonthRevenue(supplier.getId());
+            
+            Map<String, Object> revenueData = Map.of(
+                "totalRevenue", totalRevenue,
+                "receivedAmount", receivedAmount,
+                "pendingAmount", pendingAmount,
+                "thisMonthRevenue", thisMonthRevenue,
+                "lastMonthRevenue", lastMonthRevenue
+            );
+            
+            System.out.println("💰 Données de revenus récupérées:");
+            System.out.println("  - Revenus totaux: " + totalRevenue);
+            System.out.println("  - Montant reçu: " + receivedAmount);
+            System.out.println("  - Montant en attente: " + pendingAmount);
+            
+            return ResponseEntity.ok(revenueData);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des revenus: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Récupérer les statistiques de performance du fournisseur
+     */
+    @GetMapping("/supplier/dashboard/performance")
+    @PreAuthorize("hasAuthority('ROLE_SUPPLIER')")
+    public ResponseEntity<Map<String, Object>> getSupplierPerformance() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            
+            System.out.println("📈 Récupération des statistiques de performance pour: " + email);
+            
+            Supplier supplier = supplierRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec l'email: " + email));
+            
+            SupplierDashboardStats stats = supplierDashboardService.getSupplierDashboardStats(supplier.getId());
+            
+            Map<String, Object> performanceData = Map.of(
+                "averageProcessingTime", stats.getAverageProcessingTime(),
+                "totalOrders", stats.getTotalOrders(),
+                "completedOrders", stats.getCompletedOrders(),
+                "completionRate", stats.getCompletionRate(),
+                "topSellingProduct", stats.getTopSellingProduct(),
+                "topSellingQuantity", stats.getTopSellingQuantity(),
+                "lastActivity", stats.getLastActivity(),
+                "accountCreated", stats.getAccountCreated()
+            );
+            
+            System.out.println("📈 Données de performance récupérées:");
+            System.out.println("  - Taux de complétion: " + stats.getCompletionRate() + "%");
+            System.out.println("  - Produit le plus vendu: " + stats.getTopSellingProduct());
+            System.out.println("  - Temps moyen de traitement: " + stats.getAverageProcessingTime() + " heures");
+            
+            return ResponseEntity.ok(performanceData);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la récupération des statistiques de performance: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

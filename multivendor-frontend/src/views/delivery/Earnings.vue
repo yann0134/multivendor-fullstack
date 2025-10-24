@@ -13,15 +13,15 @@
           <v-card-text>
             <div class="d-flex justify-space-between mb-2">
               <span>Gains du mois</span>
-              <span class="text-h6">{{ earnings.monthly }}€</span>
+              <span class="text-h6">{{ earnings.monthly }} FCFA</span>
             </div>
             <div class="d-flex justify-space-between mb-2">
               <span>Gains totaux</span>
-              <span class="text-h6">{{ earnings.total }}€</span>
+              <span class="text-h6">{{ earnings.total }} FCFA</span>
             </div>
             <div class="d-flex justify-space-between mb-2">
               <span>Paiements en attente</span>
-              <span class="text-h6">{{ earnings.pending }}€</span>
+              <span class="text-h6">{{ earnings.pending }} FCFA</span>
             </div>
           </v-card-text>
         </v-card>
@@ -39,7 +39,7 @@
                 <v-list-item-title>{{ payment.description }}</v-list-item-title>
                 <v-list-item-subtitle>{{ payment.date }}</v-list-item-subtitle>
                 <template v-slot:append>
-                  <span class="text-h6">{{ payment.amount }}€</span>
+                  <span class="text-h6">{{ payment.amount }} FCFA</span>
                 </template>
               </v-list-item>
             </v-list>

@@ -13,7 +13,7 @@
       <!-- Badges pour produits spéciaux -->
       <div class="product-badges">
         <v-chip 
-          v-if="product.isOrganic" 
+          v-if="product.organic" 
           color="green" 
           size="small" 
           class="ma-2"
@@ -21,12 +21,20 @@
           🌱 Bio
         </v-chip>
         <v-chip 
-          v-if="product.isLocal" 
+          v-if="product.local" 
           color="orange" 
           size="small" 
           class="ma-2"
         >
           🏠 Local
+        </v-chip>
+        <v-chip 
+          v-if="product.fresh" 
+          color="blue" 
+          size="small" 
+          class="ma-2"
+        >
+          ❄️ Frais
         </v-chip>
         <v-chip 
           v-if="product.discountPercent > 0" 
@@ -120,6 +128,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
+import { getDefaultProductImage } from '@/utils/defaultImages'
 
 const props = defineProps({
   product: {
@@ -139,28 +148,28 @@ const productImage = computed(() => {
     return props.product.images[0]
   }
   
-  // Image par défaut selon le type de produit
-  if (props.product.category?.type === 'ANIMAL') {
-    return 'https://images.unsplash.com/photo-1548550023-8bdb78b265c3?w=400&h=300&fit=crop'
-  } else {
-    return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop'
-  }
+  // Utiliser la fonction configurée pour obtenir une image par défaut
+  return getDefaultProductImage(props.product)
 })
 
 // Gestion du stock
 const canAddToCart = computed(() => {
-  return props.product.quantity > 0 && props.product.isActive?.()
+  // Utiliser supplierAvailableQuantity pour les produits reçus par l'entrepôt
+  const availableQuantity = props.product.supplierAvailableQuantity || props.product.quantity || 0
+  return availableQuantity > 0 && props.product.active
 })
 
 const stockColor = computed(() => {
-  if (props.product.quantity === 0) return 'red'
-  if (props.product.quantity < 10) return 'orange'
+  const availableQuantity = props.product.supplierAvailableQuantity || props.product.quantity || 0
+  if (availableQuantity === 0) return 'red'
+  if (availableQuantity < 10) return 'orange'
   return 'green'
 })
 
 const stockText = computed(() => {
-  if (props.product.quantity === 0) return 'Rupture de stock'
-  if (props.product.quantity < 10) return `Plus que ${props.product.quantity} en stock`
+  const availableQuantity = props.product.supplierAvailableQuantity || props.product.quantity || 0
+  if (availableQuantity === 0) return 'Rupture de stock'
+  if (availableQuantity < 10) return `Plus que ${availableQuantity} en stock`
   return 'En stock'
 })
 
@@ -184,11 +193,16 @@ const addToCart = async () => {
   
   loading.value = true
   try {
-    await cartStore.addToCart({
-      productId: props.product.id,
-      quantity: 1,
-      price: props.product.sellingPrice
-    })
+    const options = {
+      variety: 'Standard',
+      packaging: props.product.unit || 'kg',
+      weight: props.product.weight,
+      storageConditions: props.product.storageConditions,
+      organic: props.product.organic,
+      fresh: props.product.fresh
+    }
+    
+    await cartStore.addToCart(props.product, 1, options)
   } catch (error) {
     console.error('Erreur lors de l\'ajout au panier:', error)
   } finally {

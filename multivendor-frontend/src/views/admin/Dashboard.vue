@@ -225,7 +225,7 @@ const pendingProducts = ref([
     image: '/images/tomates.jpg',
     supplierName: 'Ferme Bio Yannick',
     supplierLocation: 'Douala, Cameroun',
-    price: '800 FCFA/kg',
+    price: '800  FCFA/kg',
     stock: 50,
     submittedAt: '2024-10-19',
     status: 'PENDING_VALIDATION'
@@ -236,7 +236,7 @@ const pendingProducts = ref([
     image: '/images/carottes.jpg',
     supplierName: 'Ferme Vert',
     supplierLocation: 'Yaoundé, Cameroun',
-    price: '600 FCFA/kg',
+    price: '600  FCFA/kg',
     stock: 30,
     submittedAt: '2024-10-19',
     status: 'PENDING_VALIDATION'
@@ -247,7 +247,7 @@ const pendingProducts = ref([
     image: '/images/bananes.jpg',
     supplierName: 'Plantation Manga',
     supplierLocation: 'Bafoussam, Cameroun',
-    price: '2000 FCFA/régime',
+    price: '2000  FCFA/régime',
     stock: 25,
     submittedAt: '2024-10-18',
     status: 'PENDING_VALIDATION'

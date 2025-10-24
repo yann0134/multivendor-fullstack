@@ -1,15 +1,15 @@
-# Interface de Récupération du Fournisseur
+# Interface des Produits Livrés et Reçus
 
 ## Description
-L'interface de récupération permet aux fournisseurs de gérer les produits prêts à être récupérés par l'entrepôt.
+L'interface permet aux fournisseurs de visualiser les produits qu'ils ont expédiés et qui ont été acceptés par l'entrepôt.
 
 ## Composants
 
 ### 1. Collection.vue
-**Page principale de récupération**
-- Liste des produits prêts pour la récupération
+**Page principale des produits livrés et reçus**
+- Liste des produits expédiés et acceptés par l'entrepôt
 - Filtrage par nom de produit
-- Actions de confirmation de récupération
+- Affichage des statuts d'envoi et de réception
 - Statuts visuels avec couleurs et icônes
 
 ### 2. CollectionDetail.vue
@@ -21,8 +21,9 @@ L'interface de récupération permet aux fournisseurs de gérer les produits pr�
 
 ### 3. CollectionStats.vue
 **Composant de statistiques**
-- Nombre de produits prêts
-- Nombre de produits récupérés
+- Nombre de produits livrés et reçus
+- Nombre de produits expédiés
+- Nombre de produits non expédiés
 - Statistiques en temps réel
 
 ### 4. CollectionTimeline.vue
@@ -34,21 +35,29 @@ L'interface de récupération permet aux fournisseurs de gérer les produits pr�
 ## Fonctionnalités
 
 ### Gestion des Statuts
-- **READY_FOR_COLLECTION** : Prêt pour récupération (orange)
-- **COLLECTED** : Récupéré (vert)
-- **PENDING** : En attente (bleu)
-- **CANCELLED** : Annulé (rouge)
+
+#### Statuts d'Envoi
+- **NOT_SHIPPED** : Non expédié (orange)
+- **SHIPPED** : Expédié (vert)
+- **IN_TRANSIT** : En transit (bleu)
+- **DELIVERED** : Livré (vert)
+
+#### Statuts de Réception
+- **PENDING** : En attente (orange)
+- **RECEIVED** : Reçu (vert)
+- **REJECTED** : Rejeté (rouge)
+- **PROCESSING** : En traitement (bleu)
 
 ### Actions Disponibles
-- **Confirmer Récupération** : Marquer un produit comme récupéré
 - **Voir Détails** : Accéder à la page de détail
 - **Filtrer** : Rechercher par nom de produit
+- **Consulter** : Voir les statuts d'envoi et de réception
 
-### Timeline de Récupération
+### Timeline de Livraison
 1. **Produit créé** : Date d'ajout au système
 2. **Produit approuvé** : Date de validation admin
-3. **Récupération prévue** : Date de livraison (commande + 3 jours)
-4. **Récupéré** : Date de confirmation de récupération
+3. **Produit expédié** : Date d'envoi par le fournisseur
+4. **Produit reçu** : Date d'acceptation par l'entrepôt
 
 ## Structure des Données
 
@@ -57,7 +66,8 @@ L'interface de récupération permet aux fournisseurs de gérer les produits pr�
   id: Number,
   title: String,
   description: String,
-  collectionStatus: 'READY_FOR_COLLECTION' | 'COLLECTED' | 'PENDING' | 'CANCELLED',
+  shipmentStatus: 'NOT_SHIPPED' | 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED',
+  receptionStatus: 'PENDING' | 'RECEIVED' | 'REJECTED' | 'PROCESSING',
   supplierPrice: Number,
   createdAt: String,
   images: Array
@@ -67,8 +77,8 @@ L'interface de récupération permet aux fournisseurs de gérer les produits pr�
 ## Navigation
 
 ### Routes
-- `/supplier/collection` : Liste des récupérations
-- `/supplier/collection/:id` : Détail d'une récupération
+- `/supplier/collection` : Liste des produits livrés et reçus
+- `/supplier/collection/:id` : Détail d'un produit
 
 ### Intégration Dashboard
 - Carte "Récupérations" avec statistiques
@@ -78,31 +88,30 @@ L'interface de récupération permet aux fournisseurs de gérer les produits pr�
 ## API Endpoints
 
 ### Récupération des données
-- `GET /api/products/status/APPROVED/supplier` : Produits approuvés
+- `GET /api/products/delivered-and-received/supplier` : Produits livrés et reçus
 - `GET /api/products/:id` : Détail d'un produit
-- `PUT /api/products/:id/confirm-collection` : Confirmer récupération
 
 ## Tests
 
 ### Tests Unitaires
-- Affichage de la liste des récupérations
+- Affichage de la liste des produits livrés et reçus
 - Filtrage par recherche
-- Gestion des statuts
-- Actions de confirmation
+- Gestion des statuts d'envoi et de réception
+- Affichage des informations de livraison
 
 ### Tests d'Intégration
 - Navigation entre les pages
-- Mise à jour des statuts
+- Affichage des statuts d'envoi et de réception
 - Synchronisation avec l'API
 
 ## Utilisation
 
 ### Pour le Fournisseur
-1. **Consulter** : Voir les produits prêts pour récupération
-2. **Confirmer** : Marquer les produits comme récupérés
-3. **Suivre** : Consulter l'historique des récupérations
+1. **Consulter** : Voir les produits livrés et reçus
+2. **Suivre** : Consulter les statuts d'envoi et de réception
+3. **Analyser** : Voir l'historique des livraisons
 
 ### Pour l'Administrateur
-1. **Surveiller** : Voir les statistiques de récupération
+1. **Surveiller** : Voir les statistiques de livraison
 2. **Gérer** : Modifier les statuts si nécessaire
-3. **Analyser** : Consulter les rapports de récupération
+3. **Analyser** : Consulter les rapports de livraison

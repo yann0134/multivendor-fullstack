@@ -21,7 +21,6 @@ public interface SupplyOrderService {
     SupplyOrder confirmDeliveryToWarehouse(Long supplyOrderId, Long supplierId) throws Exception;
     List<SupplyOrder> getSupplyOrdersByCurrentSupplierAndProductStatus(Product.ProductStatus productStatus);
     SupplyOrder completeSupplyOrderDelivery(Long supplyOrderId, Long warehouseId) throws Exception;
-
-
+    List<Product> getSupplyOrdersByCurrentSupplierExpedier();
 
 }

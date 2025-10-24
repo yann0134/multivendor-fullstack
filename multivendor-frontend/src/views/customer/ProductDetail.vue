@@ -24,11 +24,14 @@
         </div>
         
         <div class="d-flex align-center mb-4">
-          <span class="text-h4 text-primary mr-4">{{ product.sellingPrice }}€</span>
-          <span v-if="product.mrpPrice > product.sellingPrice" class="text-decoration-line-through text-grey">
-            {{ product.mrpPrice }}€
+          <span class="text-h4 text-primary mr-4 font-weight-bold">
+            {{ formatPrice(product.sellingPrice) }}
           </span>
-          <v-chip v-if="product.discountPercent > 0" color="success" class="ml-2">
+          <span v-if="product.mrpPrice > product.sellingPrice" class="text-decoration-line-through text-grey text-h6">
+            {{ formatPrice(product.mrpPrice) }}
+          </span>
+          <v-chip v-if="product.discountPercent > 0" color="success" class="ml-2" size="small">
+            <v-icon left>mdi-percent</v-icon>
             -{{ product.discountPercent }}%
           </v-chip>
         </div>
@@ -36,27 +39,27 @@
         <p class="text-body-1 mb-4">{{ product.description }}</p>
         
         <div class="mb-4">
-          <h3 class="text-h6 mb-2">Couleur</h3>
-          <v-chip-group v-model="selectedColor">
+          <h3 class="text-h6 mb-2">Variété</h3>
+          <v-chip-group v-model="selectedVariety">
             <v-chip
-              v-for="color in colors"
-              :key="color"
-              :value="color"
+              v-for="variety in varieties"
+              :key="variety"
+              :value="variety"
             >
-              {{ color }}
+              {{ variety }}
             </v-chip>
           </v-chip-group>
         </div>
         
         <div class="mb-4">
-          <h3 class="text-h6 mb-2">Taille</h3>
-          <v-chip-group v-model="selectedSize">
+          <h3 class="text-h6 mb-2">Conditionnement</h3>
+          <v-chip-group v-model="selectedPackaging">
             <v-chip
-              v-for="size in sizes"
-              :key="size"
-              :value="size"
+              v-for="packaging in packagingOptions"
+              :key="packaging"
+              :value="packaging"
             >
-              {{ size }}
+              {{ packaging }}
             </v-chip>
           </v-chip-group>
         </div>
@@ -67,14 +70,16 @@
             v-model.number="quantity"
             type="number"
             min="1"
-            :max="product.quantity"
+            :max="product.supplierAvailableQuantity || product.quantity"
             variant="outlined"
             style="max-width: 120px"
+            suffix="unité(s)"
+            :rules="[v => v > 0 || 'Quantité requise']"
           />
         </div>
         
         <!-- Informations de stock -->
-        <div class="mb-4">
+        <!--<div class="mb-4">
           <h3 class="text-h6 mb-2">📦 Disponibilité</h3>
           <v-alert 
             v-if="product.supplierAvailableQuantity > 0"
@@ -102,7 +107,7 @@
               Demande admin: {{ product.adminRequestedQuantity }} unités
             </v-chip>
           </div>
-        </div>
+        </div>-->
         
         <div class="d-flex gap-2">
           <v-btn
@@ -110,7 +115,7 @@
             size="large"
             @click="addToCart"
             :loading="loading"
-            :disabled="!selectedSize || !selectedColor"
+            :disabled="!selectedVariety || !selectedPackaging"
           >
             <v-icon left>mdi-cart-plus</v-icon>
             Ajouter au panier
@@ -122,7 +127,7 @@
             size="large"
             @click="buyNow"
             :loading="loading"
-            :disabled="!selectedSize || !selectedColor"
+            :disabled="!selectedVariety || !selectedPackaging"
           >
             Acheter maintenant
           </v-btn>
@@ -130,6 +135,151 @@
       </v-col>
     </v-row>
     
+
+     <!-- Caractéristiques du produit -->
+     <v-row class="mt-8">
+      <v-col cols="12">
+      
+        <v-card>
+          <v-card-text>
+            <v-row>
+              <!-- Informations générales du produit -->
+              <v-col cols="12" md="6">
+                <h3 class="text-h6 mb-3">🌱 Informations Agronomiques</h3>
+                <v-list density="compact">
+                  <v-list-item v-if="product.origin">
+                    <v-list-item-title>
+                      <v-icon class="mr-2">mdi-map-marker</v-icon>
+                      Origine
+                    </v-list-item-title>
+                    <v-list-item-subtitle>{{ product.origin }}</v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.season">
+                    <v-list-item-title>
+                      <v-icon class="mr-2">mdi-calendar</v-icon>
+                      Saison de récolte
+                    </v-list-item-title>
+                    <v-list-item-subtitle>{{ product.season }}</v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.variety">
+                    <v-list-item-title>
+                      <v-icon class="mr-2">mdi-seed</v-icon>
+                      Variété
+                    </v-list-item-title>
+                    <v-list-item-subtitle>{{ product.variety }}</v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.growingMethod">
+                    <v-list-item-title>
+                      <v-icon class="mr-2">mdi-sprout</v-icon>
+                      Méthode de culture
+                    </v-list-item-title>
+                    <v-list-item-subtitle>{{ product.growingMethod }}</v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.nutritionalInfo">
+                    <v-list-item-title>
+                      <v-icon class="mr-2">mdi-food-apple</v-icon>
+                      Valeurs nutritionnelles
+                    </v-list-item-title>
+                    <v-list-item-subtitle>{{ product.nutritionalInfo }}</v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.storageConditions">
+                    <v-list-item-title>
+                      <v-icon class="mr-2">mdi-thermometer</v-icon>
+                      Conditions de stockage
+                    </v-list-item-title>
+                    <v-list-item-subtitle>{{ product.storageConditions }}</v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+              
+              <!-- Informations de stock -->
+              <!--<v-col cols="12" md="6">
+                <h3 class="text-h6 mb-3">📦 Informations de Stock</h3>
+                <v-list density="compact">
+                  <v-list-item>
+                    <v-list-item-title>Quantité disponible</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip 
+                        :color="product.supplierAvailableQuantity > 0 ? 'success' : 'error'"
+                        size="small"
+                      >
+                        <v-icon left>mdi-package-variant</v-icon>
+                        {{ formatQuantity(product.supplierAvailableQuantity || 0) }} unités
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.adminRequestedQuantity > 0">
+                    <v-list-item-title>Demande administrateur</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip color="info" size="small">
+                        <v-icon left>mdi-account-cog</v-icon>
+                        {{ formatQuantity(product.adminRequestedQuantity) }} unités
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.stockNegotiationPending">
+                    <v-list-item-title>Statut de négociation</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip color="orange" size="small">
+                        <v-icon left>mdi-clock</v-icon>
+                        En cours
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>-->
+            </v-row>
+            
+            <!-- Informations de prix -->
+            <!--<v-row class="mt-4">
+              <v-col cols="12">
+                <h3 class="text-h6 mb-3">💰 Informations de Prix</h3>
+                <v-list density="compact">
+                  <v-list-item>
+                    <v-list-item-title>Prix de vente</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip color="primary" size="small">
+                        <v-icon left>mdi-currency-usd</v-icon>
+                        {{ formatPrice(product.sellingPrice) }}
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.mrpPrice > product.sellingPrice">
+                    <v-list-item-title>Prix MRP</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip color="grey" size="small" variant="outlined">
+                        <v-icon left>mdi-tag</v-icon>
+                        <span class="text-decoration-line-through">{{ formatPrice(product.mrpPrice) }}</span>
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="product.discountPercent > 0">
+                    <v-list-item-title>Remise</v-list-item-title>
+                    <v-list-item-subtitle>
+                      <v-chip color="success" size="small">
+                        <v-icon left>mdi-percent</v-icon>
+                        -{{ product.discountPercent }}%
+                      </v-chip>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+            </v-row>-->
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+
     <!-- Avis et commentaires -->
     <v-row class="mt-8">
       <v-col cols="12">
@@ -169,75 +319,9 @@
           </v-card-text>
         </v-card>
       </v-col>
-    </v-row>
+     </v-row>
+     
     
-    <!-- Caractéristiques du produit -->
-    <v-row class="mt-8">
-      <v-col cols="12">
-        <h2 class="text-h5 mb-4">Caractéristiques du produit</h2>
-        <v-card>
-          <v-card-text>
-            <v-row>
-              <v-col cols="12" md="6">
-                <h3 class="text-h6 mb-3">📦 Informations de Stock</h3>
-                <v-list density="compact">
-                  <v-list-item>
-                    <v-list-item-title>Quantité disponible</v-list-item-title>
-                    <v-list-item-subtitle>
-                      <v-chip 
-                        :color="product.supplierAvailableQuantity > 0 ? 'success' : 'error'"
-                        size="small"
-                      >
-                        {{ product.supplierAvailableQuantity || 0 }} unités
-                      </v-chip>
-                    </v-list-item-subtitle>
-                  </v-list-item>
-                  
-                  <v-list-item v-if="product.adminRequestedQuantity > 0">
-                    <v-list-item-title>Demande administrateur</v-list-item-title>
-                    <v-list-item-subtitle>
-                      <v-chip color="info" size="small">
-                        {{ product.adminRequestedQuantity }} unités
-                      </v-chip>
-                    </v-list-item-subtitle>
-                  </v-list-item>
-                  
-                  <v-list-item v-if="product.stockNegotiationPending">
-                    <v-list-item-title>Statut de négociation</v-list-item-title>
-                    <v-list-item-subtitle>
-                      <v-chip color="orange" size="small">
-                        <v-icon left>mdi-clock</v-icon>
-                        En cours
-                      </v-chip>
-                    </v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
-              </v-col>
-              
-              <v-col cols="12" md="6">
-                <h3 class="text-h6 mb-3">💰 Informations de Prix</h3>
-                <v-list density="compact">
-                  <v-list-item>
-                    <v-list-item-title>Prix de vente</v-list-item-title>
-                    <v-list-item-subtitle>{{ product.sellingPrice }}€</v-list-item-subtitle>
-                  </v-list-item>
-                  
-                  <v-list-item v-if="product.mrpPrice > product.sellingPrice">
-                    <v-list-item-title>Prix MRP</v-list-item-title>
-                    <v-list-item-subtitle class="text-decoration-line-through">{{ product.mrpPrice }}€</v-list-item-subtitle>
-                  </v-list-item>
-                  
-                  <v-list-item v-if="product.discountPercent > 0">
-                    <v-list-item-title>Remise</v-list-item-title>
-                    <v-list-item-subtitle>{{ product.discountPercent }}%</v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
   </v-container>
   
   <v-container v-else>
@@ -248,6 +332,13 @@
       </v-col>
     </v-row>
   </v-container>
+
+  <!-- Notification Toast -->
+  <NotificationToast
+    v-model="showNotification"
+    :message="notificationMessage"
+    :type="notificationType"
+  />
 </template>
 
 <script setup>
@@ -255,22 +346,53 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
+import { useReviewStore } from '@/stores/reviews'
 import ProductImageGallery from '@/components/customer/ProductImageGallery.vue'
+import NotificationToast from '@/components/common/NotificationToast.vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
 const cartStore = useCartStore()
+const reviewStore = useReviewStore()
 
 const product = ref(null)
 const loading = ref(false)
 const quantity = ref(1)
-const selectedColor = ref('')
-const selectedSize = ref('')
-const reviews = ref([])
+const selectedVariety = ref('')
+const selectedPackaging = ref('')
+const reviews = computed(() => reviewStore.reviews)
 
-const colors = ref(['Rouge', 'Bleu', 'Vert', 'Noir', 'Blanc'])
-const sizes = ref(['S', 'M', 'L', 'XL'])
+// Notifications
+const showNotification = ref(false)
+const notificationMessage = ref('')
+const notificationType = ref('info')
+
+// Options dynamiques selon le type de produit
+const varieties = computed(() => {
+  if (!product.value) return []
+  
+  if (product.value.category?.type === 'ANIMAL') {
+    return ['Standard', 'Premium', 'Bio', 'Élevage traditionnel']
+  } else if (product.value.category?.type === 'VEGETAL') {
+    return ['Standard', 'Bio', 'Local', 'Importé']
+  }
+  return ['Standard']
+})
+
+const packagingOptions = computed(() => {
+  if (!product.value) return []
+  
+  const unit = product.value.unit || 'kg'
+  if (unit === 'kg') {
+    return ['1kg', '2kg', '5kg', '10kg']
+  } else if (unit === 'piece') {
+    return ['1 pièce', '5 pièces', '10 pièces', '20 pièces']
+  } else if (unit === 'Sac') {
+    return ['1 Sac', '2 Sacs', '5 Sacs', '10 Sacs']
+  }
+  return [unit]
+})
 
 // Images du produit pour la galerie
 const productImages = computed(() => {
@@ -291,10 +413,28 @@ const productImages = computed(() => {
 const addToCart = async () => {
   loading.value = true
   try {
-    await cartStore.addToCart(product.value, quantity.value, selectedSize.value)
+    const options = {
+      variety: selectedVariety.value,
+      packaging: selectedPackaging.value,
+      weight: product.value.weight,
+      storageConditions: product.value.storageConditions,
+      organic: product.value.organic,
+      fresh: product.value.fresh
+    }
+    
+    await cartStore.addToCart(product.value, quantity.value, options)
+    
     // Afficher notification de succès
+    showNotification.value = true
+    notificationMessage.value = 'Produit ajouté au panier avec succès !'
+    notificationType.value = 'success'
   } catch (error) {
     console.error('Erreur lors de l\'ajout au panier:', error)
+    
+    // Afficher notification d'erreur
+    showNotification.value = true
+    notificationMessage.value = error.message || 'Erreur lors de l\'ajout au panier'
+    notificationType.value = 'error'
   } finally {
     loading.value = false
   }
@@ -305,12 +445,38 @@ const buyNow = async () => {
   router.push('/customer/checkout')
 }
 
+// Fonction de formatage des prix
+const formatPrice = (price) => {
+  if (!price) return '0 FCFA'
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price).replace('XOF', 'FCFA')
+}
+
+// Fonction de formatage du poids
+const formatWeight = (weight) => {
+  if (!weight) return '0'
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3
+  }).format(weight)
+}
+
+// Fonction de formatage des quantités
+const formatQuantity = (quantity) => {
+  if (!quantity) return '0'
+  return new Intl.NumberFormat('fr-FR').format(quantity)
+}
+
 onMounted(async () => {
   const productId = route.params.id
   try {
     product.value = await productStore.fetchProductById(productId)
     // Charger les avis
-    reviews.value = product.value.reviews || []
+    await reviewStore.fetchProductReviews(productId)
   } catch (error) {
     console.error('Erreur lors du chargement du produit:', error)
   }

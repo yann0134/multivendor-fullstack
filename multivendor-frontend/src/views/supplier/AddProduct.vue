@@ -62,7 +62,7 @@
                 <v-col cols="12" md="4">
                   <v-text-field
                     v-model.number="formData.mrpPrice"
-                    label="Prix de marché (FCFA) *"
+                    label="Prix de marché ( FCFA) *"
                     type="number"
                     placeholder="1000"
                     :rules="[v => !!v || 'Le prix MRP est requis', v => v > 0 || 'Le prix doit être positif']"
@@ -73,7 +73,7 @@
                 <v-col cols="12" md="4">
                   <v-text-field
                     v-model.number="formData.sellingPrice"
-                    label="Prix de vente (FCFA) *"
+                    label="Prix de vente ( FCFA) *"
                     type="number"
                     placeholder="800"
                     :rules="[v => !!v || 'Le prix de vente est requis', v => v > 0 || 'Le prix doit être positif']"

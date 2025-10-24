@@ -27,7 +27,7 @@
         <v-card class="text-center pa-4">
           <v-icon size="48" color="info" class="mb-2">mdi-currency-eur</v-icon>
           <h3 class="text-h6">Gains du mois</h3>
-          <p class="text-h4">{{ stats.monthlyEarnings }}€</p>
+          <p class="text-h4">{{ stats.monthlyEarnings }} FCFA</p>
         </v-card>
       </v-col>
       

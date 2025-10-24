@@ -81,7 +81,7 @@
                     :rules="[v => !!v || 'Le prix MRP est requis', v => v > 0 || 'Le prix doit être positif']"
                     required
                     class="mb-3"
-                    suffix="FCFA"
+                    suffix=" FCFA"
                   ></v-text-field>
 
                   <v-text-field
@@ -91,7 +91,7 @@
                     :rules="[v => !!v || 'Le prix de vente est requis', v => v > 0 || 'Le prix doit être positif']"
                     required
                     class="mb-3"
-                    suffix="FCFA"
+                    suffix=" FCFA"
                   ></v-text-field>
 
                   <v-autocomplete
