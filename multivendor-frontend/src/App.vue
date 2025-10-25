@@ -9,14 +9,28 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useCartStore } from '@/stores/cart'
 import AppBar from '@/components/common/AppBar.vue'
 import AppFooter from '@/components/common/AppFooter.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const cartStore = useCartStore()
+
+// Initialiser le panier au démarrage si l'utilisateur est connecté
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    try {
+      await cartStore.initializeCart()
+      console.log('🛒 Panier initialisé au démarrage de l\'application')
+    } catch (error) {
+      console.warn('⚠️ Erreur lors de l\'initialisation du panier au démarrage:', error)
+    }
+  }
+})
 
 const showAppBar = computed(() => {
   const authPages = ['/login', '/register']

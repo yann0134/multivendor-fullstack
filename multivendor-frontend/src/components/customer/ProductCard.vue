@@ -121,6 +121,7 @@
 
     <v-card-actions>
       <v-btn 
+        v-if="!isProductInCart"
         color="primary" 
         variant="flat" 
         block
@@ -129,6 +130,17 @@
       >
         <v-icon left>mdi-cart-plus</v-icon>
         {{ canAddToCart ? 'Ajouter au panier' : 'Indisponible' }}
+      </v-btn>
+      
+      <v-btn 
+        v-else
+        color="success" 
+        variant="outlined" 
+        block
+        @click.stop="goToProduct"
+      >
+        <v-icon left>mdi-eye</v-icon>
+        Voir le produit
       </v-btn>
     </v-card-actions>
   </v-card>
@@ -153,6 +165,11 @@ const router = useRouter()
 const cartStore = useCartStore()
 
 const loading = ref(false)
+
+// Vérifier si le produit est dans le panier
+const isProductInCart = computed(() => {
+  return cartStore.cartItems.some(item => item.product.id === props.product.id)
+})
 
 // Image par défaut si pas d'image
 const productImage = computed(() => {

@@ -43,7 +43,7 @@
         />
         
         <v-card class="mt-4">
-          <v-card-actions>
+          <v-card-actions class="flex-column gap-2">
             <v-btn
               color="primary"
               block
@@ -52,6 +52,18 @@
             >
               <v-icon left>mdi-credit-card</v-icon>
               Passer la commande
+            </v-btn>
+            
+            <v-btn
+              color="error"
+              variant="outlined"
+              block
+              size="large"
+              @click="clearCart"
+              :loading="clearing"
+            >
+              <v-icon left>mdi-delete-sweep</v-icon>
+              Vider le panier
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -80,6 +92,45 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Modal de confirmation pour vider le panier -->
+    <v-dialog v-model="showClearConfirmDialog" max-width="500">
+      <v-card>
+        <v-card-title class="text-h5">
+          <v-icon class="mr-2" color="warning">mdi-alert-circle</v-icon>
+          Confirmer la suppression
+        </v-card-title>
+        
+        <v-card-text>
+          <p class="text-body-1 mb-4">
+            Êtes-vous sûr de vouloir vider votre panier ?
+          </p>
+          <p class="text-body-2 text-grey">
+            Cette action supprimera tous les articles de votre panier et ne peut pas être annulée.
+          </p>
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="showClearConfirmDialog = false"
+            :disabled="clearing"
+          >
+            Annuler
+          </v-btn>
+          <v-btn
+            color="error"
+            @click="confirmClearCart"
+            :loading="clearing"
+          >
+            <v-icon left>mdi-delete-sweep</v-icon>
+            Vider le panier
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -92,6 +143,8 @@ import CartSummary from '@/components/customer/CartSummary.vue'
 const cartStore = useCartStore()
 const couponCode = ref('')
 const couponLoading = ref(false)
+const clearing = ref(false)
+const showClearConfirmDialog = ref(false)
 
 const updateQuantity = async (itemId, newQuantity) => {
   if (newQuantity > 0) {
@@ -101,6 +154,23 @@ const updateQuantity = async (itemId, newQuantity) => {
 
 const removeItem = async (itemId) => {
   await cartStore.removeItem(itemId)
+}
+
+const clearCart = () => {
+  showClearConfirmDialog.value = true
+}
+
+const confirmClearCart = async () => {
+  clearing.value = true
+  try {
+    await cartStore.clearCart()
+    showClearConfirmDialog.value = false
+  } catch (error) {
+    console.error('Erreur lors du vidage du panier:', error)
+    alert('Erreur lors du vidage du panier: ' + (error.response?.data?.message || error.message))
+  } finally {
+    clearing.value = false
+  }
 }
 
 const applyCoupon = async () => {

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import authService from '@/services/authService'
+import { useCartStore } from './cart'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -51,6 +52,15 @@ export const useAuthStore = defineStore('auth', () => {
       
       console.log('🔍 Login - Utilisateur stocké:', user.value)
       
+      // Initialiser le panier après connexion
+      try {
+        const cartStore = useCartStore()
+        await cartStore.initializeCart()
+        console.log('🛒 Panier initialisé après connexion')
+      } catch (error) {
+        console.warn('⚠️ Erreur lors de l\'initialisation du panier:', error)
+      }
+      
       // Réinitialiser l'état OTP
       otpSent.value = false
       otpEmail.value = ''
@@ -77,6 +87,15 @@ export const useAuthStore = defineStore('auth', () => {
       authService.saveAuthData(jwt, { email: userData.email, role })
       
       console.log('🔍 Signup - Utilisateur stocké:', user.value)
+      
+      // Initialiser le panier après inscription
+      try {
+        const cartStore = useCartStore()
+        await cartStore.initializeCart()
+        console.log('🛒 Panier initialisé après inscription')
+      } catch (error) {
+        console.warn('⚠️ Erreur lors de l\'initialisation du panier:', error)
+      }
       
       // Réinitialiser l'état OTP
       otpSent.value = false

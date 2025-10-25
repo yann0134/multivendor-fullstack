@@ -198,6 +198,12 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
+  // Initialiser le panier (à appeler lors de la connexion)
+  const initializeCart = async () => {
+    console.log('🛒 Initialisation du panier...')
+    await fetchCart()
+  }
+
   return {
     cartItems,
     cart,
@@ -208,6 +214,7 @@ export const useCartStore = defineStore('cart', () => {
     totalMrpPrice,
     discount,
     fetchCart,
+    initializeCart,
     addToCart,
     updateQuantity,
     removeItem,

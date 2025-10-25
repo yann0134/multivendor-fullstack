@@ -15,7 +15,6 @@ import com.camoutech.multivendor.model.RecipeIngredient;
 import com.camoutech.multivendor.model.User;
 import com.camoutech.multivendor.request.AddItemRequest;
 import com.camoutech.multivendor.response.ApiResponse;
-import com.camoutech.multivendor.service.CartItemService;
 import com.camoutech.multivendor.service.CartService;
 import com.camoutech.multivendor.service.ProductService;
 import com.camoutech.multivendor.service.RecipeService;
@@ -34,7 +33,6 @@ import java.util.Map;
 public class CartController {
 
     private final CartService cartService;
-    private final CartItemService cartItemService;
     private final UserService userService;
     private final ProductService productService;
     private final RecipeService recipeService;
@@ -89,7 +87,7 @@ public class CartController {
             user = userService.findUserByJwtToken(jwt);
         }
         
-        cartItemService.removeCartItem(user.getId(), cartItemId);
+        cartService.removeCartItem(user.getId(), cartItemId);
 
         ApiResponse res = new ApiResponse();
         res.setMessage("Item Remove From Cart");
@@ -112,7 +110,7 @@ public class CartController {
 
         CartItem updatedCartItem = null;
         if (cartItem.getQuantity()>0){
-            updatedCartItem = cartItemService.updateCartItem(user.getId(), cartItemId, cartItem);
+            updatedCartItem = cartService.updateCartItem(user.getId(), cartItemId, cartItem);
         }
 
         return new ResponseEntity<>(updatedCartItem, HttpStatus.ACCEPTED);
@@ -171,5 +169,18 @@ public class CartController {
         ApiResponse res = new ApiResponse();
         res.setMessage("Recette ajoutée au panier avec succès");
         return new ResponseEntity<>(res, HttpStatus.ACCEPTED);
+    }
+
+    /**
+     * Vider le panier de l'utilisateur
+     */
+    @DeleteMapping
+    public ResponseEntity<ApiResponse> clearCart(@RequestHeader("Authorization") String jwt) throws Exception {
+        User user = userService.findUserByJwtToken(jwt);
+        cartService.clearCart(user);
+        
+        ApiResponse res = new ApiResponse();
+        res.setMessage("Panier vidé avec succès");
+        return new ResponseEntity<>(res, HttpStatus.OK);
     }
 }

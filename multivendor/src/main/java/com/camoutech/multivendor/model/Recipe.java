@@ -65,7 +65,7 @@ public class Recipe {
     private User user; // Créateur de la recette
     
     @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
+    @JsonIgnore
     private List<RecipeIngredient> ingredients = new ArrayList<>();
     
     @Column(nullable = false)

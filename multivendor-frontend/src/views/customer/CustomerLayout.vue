@@ -58,6 +58,13 @@
           class="mb-1"
         />
         
+        <v-list-item 
+          prepend-icon="mdi-calendar-clock" 
+          title="Planning de Repas" 
+          to="/customer/meal-plans"
+          class="mb-1"
+        />
+        
         <!--<v-list-item
           prepend-icon="mdi-account-group" 
           title="Nos Fermiers" 

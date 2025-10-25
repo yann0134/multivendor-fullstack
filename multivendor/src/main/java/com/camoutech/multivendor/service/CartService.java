@@ -15,4 +15,10 @@ public interface CartService {
     );
 
     public Cart findUserCart(User user);
+    
+    public void clearCart(User user);
+    
+    public void removeCartItem(Long userId, Long cartItemId);
+    
+    public CartItem updateCartItem(Long userId, Long cartItemId, CartItem cartItem);
 }

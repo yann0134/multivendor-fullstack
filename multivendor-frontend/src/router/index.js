@@ -173,6 +173,16 @@ const routes = [
         path: 'recipes/:id/edit',
         name: 'CustomerEditRecipe',
         component: () => import('@/views/customer/EditRecipe.vue')
+      },
+      {
+        path: 'meal-plans',
+        name: 'CustomerMealPlanning',
+        component: () => import('@/views/customer/MealPlanning.vue')
+      },
+      {
+        path: 'meal-plans/:id',
+        name: 'CustomerMealPlanDetail',
+        component: () => import('@/views/customer/MealPlanDetail.vue')
       }
     ]
   },

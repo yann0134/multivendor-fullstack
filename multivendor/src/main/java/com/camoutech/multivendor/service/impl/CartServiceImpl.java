@@ -96,4 +96,64 @@ public class CartServiceImpl implements CartService {
         double discountPercentage = (discount / mrpPrice) * 100;
         return (int) discountPercentage;
     }
+
+    @Override
+    public void clearCart(User user) {
+        Cart cart = cartRepository.findByUserId(user.getId());
+        if (cart != null) {
+            // Supprimer tous les items du panier
+            cartItemRepository.deleteByCart(cart);
+            
+            // Réinitialiser le panier
+            cart.setTotalItem(0);
+            cart.setTotalSellingPrice(0);
+            cart.setDiscount(0);
+            cart.setTotalMrpPrice(0);
+            cartRepository.save(cart);
+        }
+    }
+
+    @Override
+    public void removeCartItem(Long userId, Long cartItemId) {
+        // Trouver le panier de l'utilisateur
+        Cart cart = cartRepository.findByUserId(userId);
+        if (cart != null) {
+            // Supprimer l'item du panier
+            cartItemRepository.deleteById(cartItemId);
+            
+            // Recalculer les totaux
+            cart.setTotalItem(cart.getCartItems().size());
+            cart.setTotalSellingPrice(cart.getCartItems().stream()
+                .mapToDouble(item -> item.getProduct().getSellingPrice() * item.getQuantity())
+                .sum());
+            cartRepository.save(cart);
+        }
+    }
+
+    @Override
+    public CartItem updateCartItem(Long userId, Long cartItemId, CartItem cartItem) {
+        // Trouver l'item existant
+        CartItem existingItem = cartItemRepository.findById(cartItemId).orElse(null);
+        if (existingItem != null) {
+            // Mettre à jour la quantité
+            existingItem.setQuantity(cartItem.getQuantity());
+            existingItem.setSize(cartItem.getSize());
+            
+            // Sauvegarder
+            CartItem updatedItem = cartItemRepository.save(existingItem);
+            
+            // Recalculer les totaux du panier
+            Cart cart = cartRepository.findByUserId(userId);
+            if (cart != null) {
+                cart.setTotalItem(cart.getCartItems().size());
+                cart.setTotalSellingPrice(cart.getCartItems().stream()
+                    .mapToDouble(item -> item.getProduct().getSellingPrice() * item.getQuantity())
+                    .sum());
+                cartRepository.save(cart);
+            }
+            
+            return updatedItem;
+        }
+        return null;
+    }
 }
