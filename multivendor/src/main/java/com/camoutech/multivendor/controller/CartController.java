@@ -10,17 +10,23 @@ package com.camoutech.multivendor.controller;
 import com.camoutech.multivendor.model.Cart;
 import com.camoutech.multivendor.model.CartItem;
 import com.camoutech.multivendor.model.Product;
+import com.camoutech.multivendor.model.Recipe;
+import com.camoutech.multivendor.model.RecipeIngredient;
 import com.camoutech.multivendor.model.User;
 import com.camoutech.multivendor.request.AddItemRequest;
 import com.camoutech.multivendor.response.ApiResponse;
 import com.camoutech.multivendor.service.CartItemService;
 import com.camoutech.multivendor.service.CartService;
 import com.camoutech.multivendor.service.ProductService;
+import com.camoutech.multivendor.service.RecipeService;
 import com.camoutech.multivendor.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -31,6 +37,7 @@ public class CartController {
     private final CartItemService cartItemService;
     private final UserService userService;
     private final ProductService productService;
+    private final RecipeService recipeService;
 
     @GetMapping
     public ResponseEntity<Cart> findUserCartHandler(
@@ -109,5 +116,60 @@ public class CartController {
         }
 
         return new ResponseEntity<>(updatedCartItem, HttpStatus.ACCEPTED);
+    }
+    
+    /**
+     * Ajouter une recette complète au panier
+     */
+    @PostMapping("/add-recipe")
+    public ResponseEntity<ApiResponse> addRecipeToCart(@RequestBody Map<String, Object> req,
+                                                       @RequestHeader(value = "Authorization", required = false) String jwt) throws Exception {
+        User user;
+        if (jwt == null || jwt.isEmpty()) {
+            user = new User();
+            user.setId(0L);
+            user.setEmail("guest@temporary.com");
+            user.setFullName("Guest User");
+        } else {
+            user = userService.findUserByJwtToken(jwt);
+        }
+        
+        // Récupérer la recette
+        Long recipeId = Long.valueOf(req.get("recipeId").toString());
+        Integer servings = Integer.valueOf(req.get("servings").toString());
+        
+        Recipe recipe = recipeService.findRecipeById(recipeId);
+        if (recipe == null) {
+            ApiResponse res = new ApiResponse();
+            res.setMessage("Recette non trouvée");
+            return new ResponseEntity<>(res, HttpStatus.NOT_FOUND);
+        }
+        
+        // Utiliser les quantités calculées par le frontend
+        @SuppressWarnings("unchecked")
+        java.util.List<Map<String, Object>> ingredients = (java.util.List<Map<String, Object>>) req.get("ingredients");
+        
+        if (ingredients != null) {
+            for (Map<String, Object> ingredientData : ingredients) {
+                Long productId = Long.valueOf(ingredientData.get("productId").toString());
+                Integer quantity = Integer.valueOf(ingredientData.get("quantity").toString());
+                
+                // Trouver le produit par son ID
+                Product product = productService.findProductById(productId);
+                if (product != null) {
+                    cartService.addCartItem(user, product, "DEFAULT", quantity);
+                }
+            }
+        } else {
+            // Fallback: utiliser les ingrédients de la recette avec calcul backend
+            for (RecipeIngredient ingredient : recipe.getIngredients()) {
+                int adjustedQuantity = Math.round((ingredient.getQuantity() * servings) / recipe.getServings());
+                cartService.addCartItem(user, ingredient.getProduct(), "DEFAULT", adjustedQuantity);
+            }
+        }
+        
+        ApiResponse res = new ApiResponse();
+        res.setMessage("Recette ajoutée au panier avec succès");
+        return new ResponseEntity<>(res, HttpStatus.ACCEPTED);
     }
 }

@@ -27,7 +27,7 @@ public class WebSecurityConfig {
                 .sessionManagement(management->management.sessionCreationPolicy(
                         SessionCreationPolicy.STATELESS
                 )).authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/categories/**", "/api/products/**", "/api/cart/**", "/uploads/**", "/auth/**", "/health/**", "/error").permitAll()
+                        .requestMatchers("/api/categories/**", "/api/products/**", "/api/cart/**", "/api/recipes/**", "/uploads/**", "/auth/**", "/health/**", "/error").permitAll()
                         .anyRequest().authenticated()
                 ).addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
                 .csrf(csrf->csrf.disable())

@@ -143,6 +143,36 @@ const routes = [
         path: 'farmers',
         name: 'CustomerFarmers',
         component: CustomerFarmers
+      },
+      {
+        path: 'recipes',
+        name: 'CustomerRecipeHome',
+        component: () => import('@/views/customer/RecipeHome.vue')
+      },
+      {
+        path: 'recipes/discover',
+        name: 'CustomerDiscoverRecipes',
+        component: () => import('@/views/customer/DiscoverRecipes.vue')
+      },
+      {
+        path: 'recipes/my-recipes',
+        name: 'CustomerMyRecipes',
+        component: () => import('@/views/customer/MyRecipes.vue')
+      },
+      {
+        path: 'recipes/create',
+        name: 'CustomerCreateRecipe',
+        component: () => import('@/views/customer/CreateRecipe.vue')
+      },
+      {
+        path: 'recipes/:id',
+        name: 'CustomerRecipeDetail',
+        component: () => import('@/views/customer/RecipeDetail.vue')
+      },
+      {
+        path: 'recipes/:id/edit',
+        name: 'CustomerEditRecipe',
+        component: () => import('@/views/customer/EditRecipe.vue')
       }
     ]
   },

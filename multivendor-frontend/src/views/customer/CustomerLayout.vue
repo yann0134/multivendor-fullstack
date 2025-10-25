@@ -51,6 +51,13 @@
           class="mb-1"
         />
         
+        <v-list-item 
+          prepend-icon="mdi-chef-hat" 
+          title="Recettes" 
+          to="/customer/recipes"
+          class="mb-1"
+        />
+        
         <!--<v-list-item
           prepend-icon="mdi-account-group" 
           title="Nos Fermiers" 
