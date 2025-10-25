@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -16,9 +18,11 @@ import java.util.List;
  */
 @Entity
 @Table(name = "recipes")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"user", "ingredients"})
 public class Recipe {
     
     @Id
@@ -100,7 +104,13 @@ public class Recipe {
         
         totalPrice = ingredients.stream()
             .filter(ingredient -> ingredient.getProduct() != null)
-            .mapToInt(ingredient -> ingredient.getQuantity() * ingredient.getProduct().getSellingPrice())
+            .mapToInt(ingredient -> {
+                try {
+                    return ingredient.getQuantity() * ingredient.getProduct().getSellingPrice();
+                } catch (Exception e) {
+                    return 0;
+                }
+            })
             .sum();
     }
     

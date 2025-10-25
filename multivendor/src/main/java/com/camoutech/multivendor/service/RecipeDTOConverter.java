@@ -53,13 +53,7 @@ public class RecipeDTOConverter {
             dto.setProductId(ingredient.getProduct().getId());
             dto.setProductTitle(ingredient.getProduct().getTitle());
             dto.setProductPrice(ingredient.getProduct().getSellingPrice());
-            
-            // Créer un objet product complet pour le frontend
-            Product product = new Product();
-            product.setId(ingredient.getProduct().getId());
-            product.setTitle(ingredient.getProduct().getTitle());
-            product.setSellingPrice(ingredient.getProduct().getSellingPrice());
-            dto.setProduct(product);
+            // Ne pas créer d'objet Product pour éviter les références circulaires
         }
         
         return dto;

@@ -2,15 +2,9 @@ package com.camoutech.multivendor.dto;
 
 import lombok.Data;
 
-/**
- * DTO pour les ingrédients de recettes
- */
 @Data
-public class RecipeIngredientDTO {
-    private Long id;
+public class CreateRecipeIngredientRequest {
     private Long productId;
-    private String productTitle;
-    private Integer productPrice;
     private Integer quantity;
     private String unit;
     private String notes;

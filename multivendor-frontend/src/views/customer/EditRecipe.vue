@@ -276,8 +276,17 @@ const totalTime = computed(() => {
 const loadRecipe = async () => {
   loading.value = true
   try {
-    const response = await api.get(`/api/recipes/${route.params.id}`)
-    recipe.value = response.data
+    const token = localStorage.getItem('jwt_token')
+    const response = await api.get(`/api/recipes/${route.params.id}/edit`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+    recipe.value = response.data;
+    recipe.value.ingredients = recipe.value.ingredients.map(ingredient => ({
+      ...ingredient,
+      productId: ingredient.productId, // Utiliser directement productId du DTO
+    }));
     console.log('Recette chargée:', recipe.value)
     console.log('Ingrédients chargés:', recipe.value.ingredients)
     // Recalculer le prix total après le chargement
@@ -318,7 +327,24 @@ const removeIngredient = (index) => {
 }
 
 const onProductSelect = (index) => {
-  calculateTotalPrice()
+  const ingredient = recipe.value.ingredients[index];
+  if (ingredient.productId) {
+    // Vérifier si ce produit n'est pas déjà utilisé dans un autre ingrédient
+    const isDuplicate = recipe.value.ingredients.some((otherIngredient, otherIndex) => 
+      otherIndex !== index && 
+      otherIngredient.productId === ingredient.productId
+    );
+    
+    if (isDuplicate) {
+      alert('Ce produit est déjà utilisé dans la recette. Veuillez choisir un autre produit.');
+      ingredient.productId = null;
+      return;
+    }
+    
+    const product = productOptions.value.find(p => p.id === ingredient.productId);
+    ingredient.product = product;
+  }
+  calculateTotalPrice();
 }
 
 const calculateTotalPrice = () => {
@@ -364,42 +390,33 @@ const updateRecipe = async () => {
   
   loading.value = true
   try {
-    console.log('Ingrédients avant transformation:', recipe.value.ingredients)
+    const token = localStorage.getItem('jwt_token')
     
-    // Préparer les données pour l'envoi
+    // Préparer les données pour l'envoi au format CreateRecipeRequest
     const recipeData = {
-      ...recipe.value,
-      ingredients: recipe.value.ingredients.map(ingredient => {
-        console.log('Transformation de l\'ingrédient:', ingredient)
-        
-        // Si l'ingrédient a déjà un objet product (chargé depuis le backend)
-        if (ingredient.product) {
-          console.log('Ingrédient avec product existant:', ingredient.product)
-          return {
-            product: ingredient.product,
-            quantity: ingredient.quantity,
-            unit: ingredient.unit,
-            notes: ingredient.notes
-          }
-        }
-        // Sinon, chercher le produit par productId (nouvel ingrédient)
-        else {
-          console.log('Recherche du produit par productId:', ingredient.productId)
-          const product = productOptions.value.find(p => p.id === ingredient.productId)
-          console.log('Produit trouvé:', product)
-          return {
-            product: product,
-            quantity: ingredient.quantity,
-            unit: ingredient.unit,
-            notes: ingredient.notes
-          }
-        }
-      })
+      title: recipe.value.title,
+      description: recipe.value.description,
+      instructions: recipe.value.instructions,
+      servings: recipe.value.servings,
+      preparationTime: recipe.value.preparationTime,
+      cookingTime: recipe.value.cookingTime,
+      difficulty: recipe.value.difficulty,
+      category: recipe.value.category,
+      isPublished: recipe.value.isPublished,
+      ingredients: recipe.value.ingredients.map(ingredient => ({
+        productId: ingredient.productId,
+        quantity: ingredient.quantity,
+        unit: ingredient.unit,
+        notes: ingredient.notes
+      }))
     }
     
     console.log('Données envoyées:', recipeData)
-    console.log('Ingrédients transformés:', recipeData.ingredients)
-    await api.put(`/api/recipes/${route.params.id}`, recipeData)
+    await api.put(`/api/recipes/${route.params.id}`, recipeData, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
     router.push('/customer/my-recipes')
   } catch (error) {
     console.error('Erreur lors de la mise à jour:', error)
@@ -410,10 +427,11 @@ const updateRecipe = async () => {
   }
 }
 
-onMounted(async () => {
-  await Promise.all([loadRecipe(), loadProducts()])
-})
-</script>
+  onMounted(async () => {
+    await Promise.all([loadRecipe(), loadProducts()])
+    console.log('EditRecipe - Recipe after load:', recipe.value);
+    console.log('EditRecipe - Product options after load:', productOptions.value);
+  })</script>
 
 <style scoped>
 .v-card {

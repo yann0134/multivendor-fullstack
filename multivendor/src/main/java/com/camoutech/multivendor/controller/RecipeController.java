@@ -1,10 +1,15 @@
 package com.camoutech.multivendor.controller;
 
+import com.camoutech.multivendor.dto.CreateRecipeIngredientRequest;
+import com.camoutech.multivendor.dto.CreateRecipeRequest;
 import com.camoutech.multivendor.dto.RecipeDTO;
+import com.camoutech.multivendor.model.Product;
 import com.camoutech.multivendor.model.Recipe;
 import com.camoutech.multivendor.model.RecipeIngredient;
 import com.camoutech.multivendor.model.User;
+import com.camoutech.multivendor.repository.RecipeIngredientRepository;
 import com.camoutech.multivendor.repository.RecipeRepository;
+import com.camoutech.multivendor.service.ProductService;
 import com.camoutech.multivendor.service.RecipeDTOConverter;
 import com.camoutech.multivendor.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +22,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Contrôleur pour la gestion des recettes
@@ -31,8 +39,10 @@ import java.util.Optional;
 public class RecipeController {
     
     private final RecipeRepository recipeRepository;
+    private final RecipeIngredientRepository recipeIngredientRepository;
     private final UserService userService;
     private final RecipeDTOConverter dtoConverter;
+    private final ProductService productService;
     
     /**
      * Créer une nouvelle recette
@@ -40,60 +50,96 @@ public class RecipeController {
     @PostMapping
     @PreAuthorize("hasAuthority('CUSTOMER')")
     public ResponseEntity<RecipeDTO> createRecipe(
-            @RequestBody Recipe recipe,
+            @RequestBody CreateRecipeRequest request,
             @RequestHeader("Authorization") String jwt) throws Exception {
         
         // Validation des champs requis
-        if (recipe.getTitle() == null || recipe.getTitle().trim().isEmpty()) {
+        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
         
-        if (recipe.getInstructions() == null || recipe.getInstructions().trim().isEmpty()) {
+        if (request.getInstructions() == null || request.getInstructions().trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
         
-        if (recipe.getServings() == null || recipe.getServings() <= 0) {
-            recipe.setServings(1);
+        if (request.getServings() == null || request.getServings() <= 0) {
+            request.setServings(1);
         }
         
-        if (recipe.getPreparationTime() == null || recipe.getPreparationTime() <= 0) {
+        if (request.getPreparationTime() == null || request.getPreparationTime() <= 0) {
             return ResponseEntity.badRequest().build();
         }
         
-        if (recipe.getCookingTime() == null || recipe.getCookingTime() < 0) {
-            recipe.setCookingTime(0);
+        if (request.getCookingTime() == null || request.getCookingTime() < 0) {
+            request.setCookingTime(0);
         }
         
-        if (recipe.getDifficulty() == null || recipe.getDifficulty().trim().isEmpty()) {
+        if (request.getDifficulty() == null || request.getDifficulty().trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
         
-        if (recipe.getCategory() == null || recipe.getCategory().trim().isEmpty()) {
+        if (request.getCategory() == null || request.getCategory().trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
         
         User user = userService.findUserByJwtToken(jwt);
+        
+        // Créer l'entité Recipe
+        Recipe recipe = new Recipe();
+        recipe.setTitle(request.getTitle());
+        recipe.setDescription(request.getDescription());
+        recipe.setInstructions(request.getInstructions());
+        recipe.setServings(request.getServings());
+        recipe.setPreparationTime(request.getPreparationTime());
+        recipe.setCookingTime(request.getCookingTime());
+        recipe.setDifficulty(request.getDifficulty());
+        recipe.setCategory(request.getCategory());
+        recipe.setIsPublished(request.getIsPublished());
         recipe.setUser(user);
         
-        // S'assurer que les ingrédients sont liés à la recette et ont des produits valides
-        if (recipe.getIngredients() != null) {
-            // Filtrer les ingrédients valides
-            List<RecipeIngredient> validIngredients = recipe.getIngredients().stream()
-                .filter(ingredient -> ingredient.getProduct() != null && ingredient.getProduct().getId() != null)
-                .collect(java.util.stream.Collectors.toList());
+        // Traiter les ingrédients
+        if (request.getIngredients() != null && !request.getIngredients().isEmpty()) {
+            List<RecipeIngredient> validIngredients = new ArrayList<>();
+            Set<Long> addedProductIds = new HashSet<>(); // Pour éviter les doublons
             
-            // Remplacer la liste des ingrédients par les ingrédients valides
-            recipe.getIngredients().clear();
-            recipe.getIngredients().addAll(validIngredients);
-            
-            // Lier les ingrédients à la recette
-            for (RecipeIngredient ingredient : recipe.getIngredients()) {
-                ingredient.setRecipe(recipe);
+            for (CreateRecipeIngredientRequest ingredientRequest : request.getIngredients()) {
+                if (ingredientRequest.getProductId() != null) {
+                    // Vérifier si ce produit n'a pas déjà été ajouté
+                    if (addedProductIds.contains(ingredientRequest.getProductId())) {
+                        continue; // Ignorer les doublons
+                    }
+                    
+                    // Récupérer le produit depuis la base de données
+                    Product product = productService.findProductById(ingredientRequest.getProductId());
+                    if (product != null) {
+                        // Créer un nouvel ingrédient avec le produit récupéré
+                        RecipeIngredient newIngredient = new RecipeIngredient();
+                        newIngredient.setProduct(product);
+                        newIngredient.setQuantity(ingredientRequest.getQuantity());
+                        newIngredient.setUnit(ingredientRequest.getUnit());
+                        newIngredient.setNotes(ingredientRequest.getNotes());
+                        newIngredient.setRecipe(recipe);
+                        validIngredients.add(newIngredient);
+                        
+                        // Marquer ce produit comme ajouté
+                        addedProductIds.add(ingredientRequest.getProductId());
+                    }
+                }
             }
+            
+            // Ajouter les ingrédients à la recette
+            recipe.getIngredients().addAll(validIngredients);
         }
+        
+        // Recalculer le prix total après avoir ajouté les ingrédients
+        recipe.calculateTotalPrice();
         
         // Sauvegarder la recette (les ingrédients seront sauvegardés automatiquement grâce à CascadeType.ALL)
         Recipe savedRecipe = recipeRepository.save(recipe);
+        
+        // Recalculer le prix total après la sauvegarde pour s'assurer qu'il est à jour
+        savedRecipe.calculateTotalPrice();
+        savedRecipe = recipeRepository.save(savedRecipe);
         
         // Convertir en DTO avant de retourner
         RecipeDTO recipeDTO = dtoConverter.toDTO(savedRecipe);
@@ -165,15 +211,43 @@ public class RecipeController {
         }
         
         if (recipe != null) {
-            System.out.println("Recipe trouvée: " + recipe.getTitle());
-            System.out.println("Nombre d'ingrédients: " + (recipe.getIngredients() != null ? recipe.getIngredients().size() : 0));
-            if (recipe.getIngredients() != null && !recipe.getIngredients().isEmpty()) {
-                System.out.println("Premier ingrédient: " + recipe.getIngredients().get(0));
-            }
+            // Recalculer le prix total pour s'assurer qu'il est à jour
+            recipe.calculateTotalPrice();
             return ResponseEntity.ok(dtoConverter.toDTO(recipe));
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+    
+    /**
+     * Récupérer une recette par ID pour l'édition (avec tous les détails)
+     */
+    @GetMapping("/{id}/edit")
+    @PreAuthorize("hasAuthority('CUSTOMER')")
+    public ResponseEntity<RecipeDTO> getRecipeForEdit(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String jwt) throws Exception {
+        
+        User user = userService.findUserByJwtToken(jwt);
+        
+        Recipe recipe = recipeRepository.findByIdWithIngredientsAndProducts(id);
+        if (recipe == null) {
+            recipe = recipeRepository.findById(id).orElse(null);
+        }
+        
+        if (recipe == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        // Vérifier que l'utilisateur est le propriétaire de la recette
+        if (!recipe.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
+        // Recalculer le prix total pour s'assurer qu'il est à jour
+        recipe.calculateTotalPrice();
+        
+        return ResponseEntity.ok(dtoConverter.toDTO(recipe));
     }
     
     /**
@@ -183,7 +257,7 @@ public class RecipeController {
     @PreAuthorize("hasAuthority('CUSTOMER')")
     public ResponseEntity<RecipeDTO> updateRecipe(
             @PathVariable Long id,
-            @RequestBody Recipe recipe,
+            @RequestBody CreateRecipeRequest request,
             @RequestHeader("Authorization") String jwt) throws Exception {
         
         User user = userService.findUserByJwtToken(jwt);
@@ -198,35 +272,126 @@ public class RecipeController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         
-        existingRecipe.setTitle(recipe.getTitle());
-        existingRecipe.setDescription(recipe.getDescription());
-        existingRecipe.setInstructions(recipe.getInstructions());
-        existingRecipe.setServings(recipe.getServings());
-        existingRecipe.setPreparationTime(recipe.getPreparationTime());
-        existingRecipe.setCookingTime(recipe.getCookingTime());
-        existingRecipe.setDifficulty(recipe.getDifficulty());
-        existingRecipe.setCategory(recipe.getCategory());
-        existingRecipe.setIsPublished(recipe.getIsPublished());
+        // Validation des champs requis
+        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
         
-        // Mettre à jour les ingrédients
-        if (recipe.getIngredients() != null) {
-            // Supprimer les anciens ingrédients
-            existingRecipe.getIngredients().clear();
-            
-            // Ajouter les nouveaux ingrédients
-            for (RecipeIngredient ingredient : recipe.getIngredients()) {
-                // Vérifier que l'ingrédient a un produit valide
-                if (ingredient.getProduct() != null && ingredient.getProduct().getId() != null) {
-                    ingredient.setRecipe(existingRecipe);
-                    existingRecipe.addIngredient(ingredient);
+        if (request.getInstructions() == null || request.getInstructions().trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        if (request.getServings() == null || request.getServings() <= 0) {
+            request.setServings(1); // Default to 1 if invalid
+        }
+        
+        if (request.getPreparationTime() == null || request.getPreparationTime() <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        if (request.getCookingTime() == null || request.getCookingTime() < 0) {
+            request.setCookingTime(0); // Default to 0 if invalid
+        }
+        
+        if (request.getDifficulty() == null || request.getDifficulty().trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        if (request.getCategory() == null || request.getCategory().trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // Mettre à jour les informations de base
+        existingRecipe.setTitle(request.getTitle());
+        existingRecipe.setDescription(request.getDescription());
+        existingRecipe.setInstructions(request.getInstructions());
+        existingRecipe.setServings(request.getServings());
+        existingRecipe.setPreparationTime(request.getPreparationTime());
+        existingRecipe.setCookingTime(request.getCookingTime());
+        existingRecipe.setDifficulty(request.getDifficulty());
+        existingRecipe.setCategory(request.getCategory());
+        existingRecipe.setIsPublished(request.getIsPublished());
+        
+        // Mettre à jour les ingrédients de manière intelligente
+        if (request.getIngredients() != null && !request.getIngredients().isEmpty()) {
+            // Créer une map des ingrédients existants par productId pour faciliter la recherche
+            Map<Long, RecipeIngredient> existingIngredientsMap = new HashMap<>();
+            for (RecipeIngredient existingIngredient : existingRecipe.getIngredients()) {
+                if (existingIngredient.getProduct() != null) {
+                    existingIngredientsMap.put(existingIngredient.getProduct().getId(), existingIngredient);
                 }
+            }
+            
+            // Collecter les productIds de la requête pour identifier les ingrédients à conserver
+            Set<Long> requestedProductIds = new HashSet<>();
+            for (CreateRecipeIngredientRequest ingredientRequest : request.getIngredients()) {
+                if (ingredientRequest.getProductId() != null) {
+                    requestedProductIds.add(ingredientRequest.getProductId());
+                }
+            }
+            
+            // Supprimer les ingrédients qui ne sont plus dans la requête
+            List<RecipeIngredient> ingredientsToRemove = new ArrayList<>();
+            for (RecipeIngredient ingredient : existingRecipe.getIngredients()) {
+                if (ingredient.getProduct() != null && 
+                    !requestedProductIds.contains(ingredient.getProduct().getId())) {
+                    ingredientsToRemove.add(ingredient);
+                }
+            }
+            
+            // Supprimer les ingrédients identifiés de la base de données
+            for (RecipeIngredient ingredientToRemove : ingredientsToRemove) {
+                existingRecipe.getIngredients().remove(ingredientToRemove);
+                // Supprimer explicitement de la base de données
+                recipeIngredientRepository.delete(ingredientToRemove);
+            }
+            
+            // Traiter chaque ingrédient de la requête
+            for (CreateRecipeIngredientRequest ingredientRequest : request.getIngredients()) {
+                if (ingredientRequest.getProductId() != null) {
+                    // Récupérer le produit depuis la base de données
+                    Product product = productService.findProductById(ingredientRequest.getProductId());
+                    if (product != null) {
+                        // Vérifier si cet ingrédient existe déjà
+                        RecipeIngredient existingIngredient = existingIngredientsMap.get(ingredientRequest.getProductId());
+                        
+                        if (existingIngredient != null) {
+                            // Mettre à jour l'ingrédient existant
+                            existingIngredient.setQuantity(ingredientRequest.getQuantity());
+                            existingIngredient.setUnit(ingredientRequest.getUnit());
+                            existingIngredient.setNotes(ingredientRequest.getNotes());
+                        } else {
+                            // Créer un nouvel ingrédient seulement s'il n'existe pas déjà
+                            RecipeIngredient newIngredient = new RecipeIngredient();
+                            newIngredient.setProduct(product);
+                            newIngredient.setQuantity(ingredientRequest.getQuantity());
+                            newIngredient.setUnit(ingredientRequest.getUnit());
+                            newIngredient.setNotes(ingredientRequest.getNotes());
+                            newIngredient.setRecipe(existingRecipe);
+                            existingRecipe.getIngredients().add(newIngredient);
+                        }
+                    }
+                }
+            }
+        } else {
+            // Si aucun ingrédient n'est fourni, supprimer tous les ingrédients existants
+            List<RecipeIngredient> allIngredients = new ArrayList<>(existingRecipe.getIngredients());
+            for (RecipeIngredient ingredient : allIngredients) {
+                existingRecipe.getIngredients().remove(ingredient);
+                recipeIngredientRepository.delete(ingredient);
             }
         }
         
         // Recalculer le prix total
         existingRecipe.calculateTotalPrice();
         
+        // Sauvegarder la recette mise à jour
         Recipe updatedRecipe = recipeRepository.save(existingRecipe);
+        
+        // Recalculer le prix total après la sauvegarde pour s'assurer qu'il est à jour
+        updatedRecipe.calculateTotalPrice();
+        updatedRecipe = recipeRepository.save(updatedRecipe);
+        
         RecipeDTO recipeDTO = dtoConverter.toDTO(updatedRecipe);
         return ResponseEntity.ok(recipeDTO);
     }

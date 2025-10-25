@@ -332,7 +332,24 @@ const removeIngredient = (index) => {
 }
 
 const onProductSelect = (index) => {
-  calculateTotalPrice()
+  const ingredient = recipe.value.ingredients[index];
+  if (ingredient.productId) {
+    // Vérifier si ce produit n'est pas déjà utilisé dans un autre ingrédient
+    const isDuplicate = recipe.value.ingredients.some((otherIngredient, otherIndex) => 
+      otherIndex !== index && 
+      otherIngredient.productId === ingredient.productId
+    );
+    
+    if (isDuplicate) {
+      alert('Ce produit est déjà utilisé dans la recette. Veuillez choisir un autre produit.');
+      ingredient.productId = null;
+      return;
+    }
+    
+    const product = productOptions.value.find(p => p.id === ingredient.productId);
+    ingredient.product = product;
+  }
+  calculateTotalPrice();
 }
 
 const calculateTotalPrice = () => {
@@ -370,15 +387,12 @@ const saveRecipe = async () => {
     // Préparer les données pour l'envoi
     const recipeData = {
       ...recipe.value,
-      ingredients: recipe.value.ingredients.map(ingredient => {
-        const product = productOptions.value.find(p => p.id === ingredient.productId)
-        return {
-          product: product,
-          quantity: ingredient.quantity,
-          unit: ingredient.unit,
-          notes: ingredient.notes
-        }
-      })
+      ingredients: recipe.value.ingredients.map(ingredient => ({
+        productId: ingredient.productId,
+        quantity: ingredient.quantity,
+        unit: ingredient.unit,
+        notes: ingredient.notes
+      }))
     }
     
     console.log('Données envoyées:', recipeData)
