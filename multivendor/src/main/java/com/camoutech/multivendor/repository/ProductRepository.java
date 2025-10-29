@@ -1,5 +1,6 @@
 package com.camoutech.multivendor.repository;
 
+import com.camoutech.multivendor.dto.ProduitDTO;
 import com.camoutech.multivendor.model.Product;
 import com.camoutech.multivendor.model.Supplier;
 import com.camoutech.multivendor.model.ProductCategory;
@@ -20,6 +21,11 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             "(:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR (:query IS NULL OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :query, '%'))))")
     List<Product> searchProduct(@Param("query") String query);
+
+    @Query("SELECT p FROM Product p WHERE " +
+            "(:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR (:query IS NULL OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :query, '%'))))")
+    List<ProduitDTO> searchProductDTO(@Param("query") String query);
 
     // Nouvelles méthodes pour les produits agricoles
     Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
@@ -175,4 +181,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     
     @Query("SELECT MAX(p.sellingPrice) FROM Product p WHERE p.status = 'APPROVED' AND p.receptionStatus = 'RECEIVED' AND p.shipmentStatus = 'DELIVERED'")
     Integer findMaxSellingPrice();
+    
+    // Méthodes pour la recherche nutritionnelle
+    List<Product> findByNutritionalInfoContainingIgnoreCase(String nutritionalInfo);
+    
+    List<Product> findByOrganicTrue();
 }

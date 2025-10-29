@@ -6,5 +6,6 @@ public interface UserService {
 
     User findUserByJwtToken(String jwt) throws Exception;
     User findUserByEmail(String email) throws Exception;
+    User findUserById(Long userId);
     User updateUser(User user) throws Exception;
 }

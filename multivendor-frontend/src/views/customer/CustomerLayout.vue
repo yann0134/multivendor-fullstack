@@ -65,6 +65,13 @@
           class="mb-1"
         />
         
+        <v-list-item 
+          prepend-icon="mdi-robot" 
+          title="Chat IA" 
+          to="/customer/chat-ia"
+          class="mb-1"
+        />
+        
         <!--<v-list-item
           prepend-icon="mdi-account-group" 
           title="Nos Fermiers" 
@@ -235,6 +242,9 @@
     <v-main>
       <router-view />
     </v-main>
+
+    <!-- Composant de notification toast -->
+    <NotificationToast />
   </v-app>
 </template>
 
@@ -243,6 +253,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
+import NotificationToast from '@/components/NotificationToast.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

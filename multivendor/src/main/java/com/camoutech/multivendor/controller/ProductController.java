@@ -15,6 +15,7 @@ import com.camoutech.multivendor.request.SupplierProfileUpdateRequest;
 import com.camoutech.multivendor.service.ProductService;
 import com.camoutech.multivendor.service.DeliveredProductService;
 import com.camoutech.multivendor.service.SupplierDashboardService;
+import com.camoutech.multivendor.service.WarehouseService;
 import com.camoutech.multivendor.model.SupplierDashboardStats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,6 +34,9 @@ import java.io.IOException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+
+
 
 
 /**
@@ -52,6 +56,7 @@ public class ProductController {
     private final SupplyOrderRepository supplyOrderRepository;
     // private final DeliveredProductService deliveredProductService;
     private final SupplierDashboardService supplierDashboardService;
+    private final WarehouseService warehouseService;
 
     /**
      * Récupérer tous les produits avec pagination (pour les clients)
@@ -1547,6 +1552,26 @@ public class ProductController {
                 product.setReceivedAt(receptionDate);
                 product.setUpdatedAt(receptionDate);
                 
+                // IMPORTANT: Initialiser le stock d'entrepôt avec la quantité livrée
+                // La quantité livrée est stockée dans adminRequestedQuantity ou supplierAvailableQuantity
+                int quantityToDeliver = product.getAdminRequestedQuantity() > 0 ? 
+                    product.getAdminRequestedQuantity() : product.getSupplierAvailableQuantity();
+                
+                if (quantityToDeliver > 0) {
+                    // Stocker la quantité livrée
+                    product.setDeliveredQuantity(quantityToDeliver);
+                    
+                    // Initialiser le stock d'entrepôt avec la quantité livrée
+                    product.setWarehouseQuantity(quantityToDeliver);
+                    product.setStockQuantity(quantityToDeliver);
+                    
+                    System.out.println("📦 Stock d'entrepôt initialisé:");
+                    System.out.println("  🏭 Produit: " + product.getTitle());
+                    System.out.println("  📊 Quantité livrée: " + quantityToDeliver);
+                    System.out.println("  📦 Stock entrepôt: " + product.getWarehouseQuantity());
+                    System.out.println("  📦 Stock total: " + product.getStockQuantity());
+                }
+                
                 // NE PAS modifier la deliveryDate - elle doit rester la vraie date d'expédition
                 // La deliveryDate est définie lors de l'expédition par le fournisseur
                 // La receivedAt est définie lors de la validation par l'entrepôt
@@ -1849,6 +1874,63 @@ public class ProductController {
             System.err.println("❌ Erreur lors de l'ajout de l'image: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Initialiser le stock d'entrepôt pour tous les produits reçus
+     * Cette méthode corrige les produits existants qui n'ont pas leur warehouseQuantity initialisé
+     */
+    @PostMapping("/initialize-warehouse-stock")
+    @PreAuthorize("hasAuthority('ROLE_WAREHOUSE')")
+    public ResponseEntity<Map<String, Object>> initializeWarehouseStock() {
+        System.out.println("🏭 Initialisation du stock d'entrepôt pour tous les produits reçus");
+        
+        try {
+            // Récupérer tous les produits reçus par l'entrepôt
+            List<Product> receivedProducts = productRepository.findReceivedProducts();
+            int updatedCount = 0;
+            
+            for (Product product : receivedProducts) {
+                // Si le warehouseQuantity est 0, l'initialiser avec la quantité livrée
+                if (product.getWarehouseQuantity() == 0) {
+                    int quantityToDeliver = product.getAdminRequestedQuantity() > 0 ? 
+                        product.getAdminRequestedQuantity() : product.getSupplierAvailableQuantity();
+                    
+                    if (quantityToDeliver > 0) {
+                        // Stocker la quantité livrée
+                        product.setDeliveredQuantity(quantityToDeliver);
+                        
+                        // Initialiser le stock d'entrepôt
+                        product.setWarehouseQuantity(quantityToDeliver);
+                        product.setStockQuantity(quantityToDeliver);
+                        productRepository.save(product);
+                        updatedCount++;
+                        
+                        System.out.println("📦 Stock initialisé pour " + product.getTitle() + 
+                            ": " + quantityToDeliver + " unités");
+                    }
+                }
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Stock d'entrepôt initialisé avec succès");
+            response.put("totalProducts", receivedProducts.size());
+            response.put("updatedProducts", updatedCount);
+            response.put("success", true);
+            
+            System.out.println("✅ Initialisation terminée: " + updatedCount + 
+                " produits mis à jour sur " + receivedProducts.size());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de l'initialisation du stock d'entrepôt: " + e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Erreur lors de l'initialisation");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 }

@@ -56,6 +56,7 @@ import DeliveryProfile from '@/views/delivery/Profile.vue'
 import WarehouseDashboard from '@/views/warehouse/Dashboard.vue'
 import WarehouseInventory from '@/views/warehouse/Inventory.vue'
 import WarehouseOrders from '@/views/warehouse/Orders.vue'
+import WarehouseCreateOrder from '@/views/warehouse/CreateOrder.vue'
 import WarehouseProfile from '@/views/warehouse/Profile.vue'
 
 // Vues administrateur
@@ -183,6 +184,11 @@ const routes = [
         path: 'meal-plans/:id',
         name: 'CustomerMealPlanDetail',
         component: () => import('@/views/customer/MealPlanDetail.vue')
+      },
+      {
+        path: 'chat-ia',
+        name: 'CustomerChatIA',
+        component: () => import('@/views/customer/ChatIA.vue')
       }
     ]
   },
@@ -334,6 +340,11 @@ const routes = [
         path: 'orders',
         name: 'WarehouseOrders',
         component: WarehouseOrders
+      },
+      {
+        path: 'create-order',
+        name: 'WarehouseCreateOrder',
+        component: WarehouseCreateOrder
       },
       {
         path: 'receptions',

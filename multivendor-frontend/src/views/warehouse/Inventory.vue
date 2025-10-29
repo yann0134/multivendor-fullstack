@@ -10,28 +10,37 @@
     </v-row>
 
     <!-- Statistiques rapides -->
-    <v-row class="mb-12">
-      <v-col cols="6" md="6">
-        <v-card color="green" dark class="text-center pa-4">
+    <v-row class="mb-8">
+      <v-col cols="12" md="4">
+        <v-card color="primary" dark class="text-center pa-4 elevation-4" rounded>
           <v-icon size="48" class="mb-2">mdi-check-circle</v-icon>
           <h3 class="text-h6">Produits Reçus</h3>
-          <p class="text-h4">{{ stats.totalReceived }}</p>
+          <p class="text-h3 font-weight-bold">{{ stats.totalReceived }}</p>
+          <v-chip small class="mt-2" color="white" text-color="primary">
+            produits en stock
+          </v-chip>
         </v-card>
       </v-col>
       
-      <!--<v-col cols="12" md="4">
-        <v-card color="blue" dark class="text-center pa-4">
-          <v-icon size="48" class="mb-2">mdi-package-variant</v-icon>
-          <h3 class="text-h6">Types de Produits</h3>
-          <p class="text-h4">{{ stats.totalStock }}</p>
+      <v-col cols="12" md="4">
+        <v-card color="success" dark class="text-center pa-4 elevation-4" rounded>
+          <v-icon size="48" class="mb-2">mdi-cash-multiple</v-icon>
+          <h3 class="text-h6">Montant des Ventes</h3>
+          <p class="text-h3 font-weight-bold">{{ formatPrice(stats.totalSalesAmount) }}</p>
+          <v-chip small class="mt-2" color="white" text-color="success">
+            {{ stats.quantitySold }} vendus
+          </v-chip>
         </v-card>
-      </v-col>-->
+      </v-col>
       
-      <v-col cols="6" md="6">
-        <v-card color="orange" dark class="text-center pa-4">
-          <v-icon size="48" class="mb-2">mdi-currency-usd</v-icon>
-          <h3 class="text-h6">Valeur Totale</h3>
-          <p class="text-h4">{{ formatPrice(stats.totalValue) }}</p>
+      <v-col cols="12" md="4">
+        <v-card color="orange darken-2" dark class="text-center pa-4 elevation-4" rounded>
+          <v-icon size="48" class="mb-2">mdi-warehouse</v-icon>
+          <h3 class="text-h6">Valeur du Stock</h3>
+          <p class="text-h3 font-weight-bold">{{ formatPrice(stats.totalValue) }}</p>
+          <v-chip small class="mt-2" color="white" text-color="orange">
+            en inventaire
+          </v-chip>
         </v-card>
       </v-col>
     </v-row>
@@ -44,6 +53,10 @@
             <v-icon class="mr-3" color="primary">mdi-warehouse</v-icon>
             <span>Inventaire de l'Entrepôt</span>
             <v-spacer></v-spacer>
+            <!--<v-btn color="orange" @click="initializeWarehouseStock" class="mr-2">
+              <v-icon left>mdi-database-sync</v-icon>
+              Initialiser Stock
+            </v-btn>-->
             <v-btn color="primary" @click="refreshInventory">
               <v-icon left>mdi-refresh</v-icon>
               Actualiser
@@ -51,9 +64,27 @@
           </v-card-title>
           
           <v-card-text>
+            <!-- Champ de recherche -->
+            <v-text-field
+              v-model="searchQuery"
+              prepend-inner-icon="mdi-magnify"
+              label="Rechercher dans l'inventaire..."
+              clearable
+              filled
+              rounded
+              dense
+              class="mb-4"
+            >
+              <template v-slot:append-outer>
+                <v-chip small color="primary" v-if="searchQuery">
+                  {{ filteredInventory.length }} résultat(s)
+                </v-chip>
+              </template>
+            </v-text-field>
+            
             <v-data-table
               :headers="headers"
-              :items="inventory"
+              :items="filteredInventory"
               :loading="loading"
               class="elevation-1"
             >
@@ -107,16 +138,24 @@
               <!-- Fournisseur -->
               <template v-slot:item.supplier="{ item }">
                 <div>
-                  <div class="font-weight-bold">{{ getSupplierName(item.supplier) }}</div>
-                  <div class="text-caption text-grey-600">{{ getSupplierLocation(item.supplier) }}</div>
+                  <div class="font-weight-bold">{{ item.supplier?.supplierName || 'N/A' }}</div>
+                  <div class="text-caption text-grey-600">{{ item.supplier?.pickupAddress?.city || 'N/A' }}</div>
+                </div>
+              </template>
+
+              <!-- Quantité Livrée par le Fournisseur -->
+              <template v-slot:item.deliveredQuantity="{ item }">
+                <div class="text-center">
+                  <div class="text-h6 text-success">{{ item.stockQuantity || 0 }}</div>
+                  <div class="text-caption">{{ item.unit || 'unité' }}</div>
                 </div>
               </template>
 
               <!-- Quantité -->
               <template v-slot:item.quantity="{ item }">
                 <div class="text-center">
-                  <div class="text-h6">{{ getDisplayQuantity(item) }}</div>
-                  <div class="text-caption">{{ getQuantityType(item) }}</div>
+                  <div class="text-h6">{{ item.warehouseQuantity || 0 }}</div>
+                  <div class="text-caption">{{ item.unit || 'unité' }}</div>
                 </div>
               </template>
 
@@ -124,39 +163,29 @@
               <template v-slot:item.price="{ item }">
                 <div class="text-right">
                   <div class="font-weight-bold">{{ formatPrice(item.sellingPrice) }}</div>
-                  <div class="text-caption">par {{ getQuantityType(item) }}</div>
+                  <div class="text-caption">par {{ item.unit || 'unité' }}</div>
                 </div>
               </template>
 
               <!-- Statuts -->
               <template v-slot:item.status="{ item }">
                 <div class="d-flex flex-column gap-1">
-                  <v-chip 
-                    :color="getProductStatusColor(item.status)" 
-                    size="small"
-                  >
-                    {{ getProductStatusText(item.status) }}
-                  </v-chip>
-                  <v-chip 
-                    :color="getReceptionStatusColor(item.receptionStatus)" 
-                    size="small"
-                  >
-                    {{ getReceptionStatusText(item.receptionStatus) }}
-                  </v-chip>
+                  <v-chip color="green" size="small">{{ item.status || 'N/A' }}</v-chip>
+                  <v-chip color="blue" size="small">{{ item.receptionStatus || 'N/A' }}</v-chip>
                 </div>
               </template>
 
               <!-- Date de livraison -->
               <template v-slot:item.deliveryDate="{ item }">
                 <div class="text-caption">
-                  {{ formatDate(getDeliveryDate(item)) }}
+                  {{ item.deliveryDate ? formatDate(item.deliveryDate) : 'N/A' }}
                 </div>
               </template>
 
               <!-- Date de réception -->
               <template v-slot:item.receivedAt="{ item }">
                 <div class="text-caption">
-                  {{ formatDate(getReceptionDate(item)) }}
+                  {{ item.receivedAt ? formatDate(item.receivedAt) : 'N/A' }}
                 </div>
               </template>
 
@@ -179,7 +208,7 @@
     </v-row>
 
     <!-- Modal de détails du produit -->
-    <v-dialog v-model="showDetailsModal" max-width="800px">
+    <v-dialog v-model="showDetailsModal" max-width="90vw" scrollable>
       <v-card v-if="selectedProduct">
         <v-card-title class="d-flex align-center">
           <v-icon class="mr-3" color="info">mdi-information</v-icon>
@@ -187,21 +216,65 @@
         </v-card-title>
         
         <v-card-text>
-          <v-row>
-            <!-- Galerie d'images -->
-            <v-col cols="12" md="6">
-              <h3 class="text-h6 mb-4">🖼️ Images du Produit</h3>
-              <ProductImageGallery 
-                :images="productImages" 
-                :show-delete-buttons="false"
-              />
+          <!-- Section récapitulative -->
+          <v-row class="mb-4">
+            <v-col cols="12" md="4">
+              <v-card color="success" dark class="text-center elevation-4">
+                <v-card-text>
+                  <v-icon size="48" class="mb-3">mdi-truck-delivery</v-icon>
+                  <div class="text-h6 mb-2">Quantité Livrée</div>
+                  <div class="text-h3 font-weight-bold">{{ getDeliveredQuantity(selectedProduct) }}</div>
+                  <div class="text-subtitle-1">{{ selectedProduct.unit }}</div>
+                </v-card-text>
+              </v-card>
             </v-col>
-            
-            <!-- Informations du produit -->
+            <v-col cols="12" md="4">
+              <v-card color="info" dark class="text-center elevation-4">
+                <v-card-text>
+                  <v-icon size="48" class="mb-3">mdi-warehouse</v-icon>
+                  <div class="text-h6 mb-2">Stock Disponible</div>
+                  <div class="text-h3 font-weight-bold">{{ selectedProduct.warehouseQuantity || 0 }}</div>
+                  <div class="text-subtitle-1">{{ selectedProduct.unit }}</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-card color="orange darken-2" dark class="text-center elevation-4">
+                <v-card-text>
+                  <v-icon size="48" class="mb-3">mdi-chart-line-variant</v-icon>
+                  <div class="text-h6 mb-2">Quantité Vendue</div>
+                  <div class="text-h3 font-weight-bold">{{ getDeliveredQuantity(selectedProduct) - (selectedProduct.warehouseQuantity || 0) }}</div>
+                  <div class="text-subtitle-1">{{ selectedProduct.unit }}</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+          
+          <v-row dense>
+            <!-- Colonne gauche - Images et Informations -->
             <v-col cols="12" md="6">
-              <h3 class="text-h6 mb-4">Informations Produit</h3>
+              <!-- Galerie d'images -->
+              <v-card outlined class="mb-3">
+                <v-card-title class="text-h6">
+                  <v-icon class="mr-2">mdi-image-multiple</v-icon>
+                  Images
+                </v-card-title>
+                <v-card-text>
+                  <ProductImageGallery 
+                    :images="productImages" 
+                    :show-delete-buttons="false"
+                  />
+                </v-card-text>
+              </v-card>
               
-              <v-list>
+              <!-- Informations Produit -->
+              <v-card outlined>
+                <v-card-title class="text-h6">
+                  <v-icon class="mr-2">mdi-information-outline</v-icon>
+                  Informations
+                </v-card-title>
+                <v-card-text>
+                  <v-list dense>
                 <v-list-item>
                   <v-list-item-title>Nom du Produit</v-list-item-title>
                   <v-list-item-subtitle>{{ selectedProduct.title }}</v-list-item-subtitle>
@@ -218,11 +291,6 @@
                 </v-list-item>
                 
                 <v-list-item>
-                  <v-list-item-title>Quantité en Stock</v-list-item-title>
-                  <v-list-item-subtitle>{{ getDisplayQuantity(selectedProduct) }} {{ getQuantityType(selectedProduct) }}</v-list-item-subtitle>
-                </v-list-item>
-                
-                <v-list-item>
                   <v-list-item-title>Date de Livraison</v-list-item-title>
                   <v-list-item-subtitle>{{ formatDate(getDeliveryDate(selectedProduct)) }}</v-list-item-subtitle>
                 </v-list-item>
@@ -232,30 +300,62 @@
                   <v-list-item-subtitle>{{ formatDate(getReceptionDate(selectedProduct)) }}</v-list-item-subtitle>
                 </v-list-item>
                 
-                <v-list-item v-if="getDeliveryDate(selectedProduct) && getReceptionDate(selectedProduct)">
-                  <v-list-item-title>
-                    <v-icon color="success" class="mr-2">mdi-sync</v-icon>
-                    Synchronisation
-                  </v-list-item-title>
-                  <v-list-item-subtitle>
-                    Les dates de livraison et réception sont synchronisées
-                  </v-list-item-subtitle>
+                <v-divider class="my-3"></v-divider>
+                
+                <!-- Section des prix -->
+                <v-list-item class="price-info-item">
+                  <v-list-item-avatar>
+                    <v-icon color="success">mdi-cash-register</v-icon>
+                  </v-list-item-avatar>
+                  <v-list-item-content>
+                    <v-list-item-title class="font-weight-bold">Prix de Vente</v-list-item-title>
+                    <v-list-item-subtitle class="text-h6 text-success font-weight-bold">
+                      {{ formatPrice(selectedProduct.sellingPrice) }}
+                    </v-list-item-subtitle>
+                    <v-list-item-subtitle class="text-caption">Prix unitaire</v-list-item-subtitle>
+                  </v-list-item-content>
                 </v-list-item>
                 
-                <v-list-item>
-                  <v-list-item-title>Prix de Vente</v-list-item-title>
-                  <v-list-item-subtitle>{{ formatPrice(selectedProduct.sellingPrice) }}</v-list-item-subtitle>
+                <v-list-item v-if="selectedProduct.mrpPrice" class="price-info-item">
+                  <v-list-item-avatar>
+                    <v-icon color="grey">mdi-tag-text</v-icon>
+                  </v-list-item-avatar>
+                  <v-list-item-content>
+                    <v-list-item-title class="font-weight-bold">Prix MRP</v-list-item-title>
+                    <v-list-item-subtitle class="text-decoration-line-through text-grey">
+                      {{ formatPrice(selectedProduct.mrpPrice) }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
                 </v-list-item>
                 
-                <v-list-item v-if="selectedProduct.mrpPrice && selectedProduct.mrpPrice > selectedProduct.sellingPrice">
-                  <v-list-item-title>Prix MRP</v-list-item-title>
-                  <v-list-item-subtitle class="text-decoration-line-through">{{ formatPrice(selectedProduct.mrpPrice) }}</v-list-item-subtitle>
+                <v-list-item v-if="selectedProduct.supplierPrice" class="price-info-item">
+                  <v-list-item-avatar>
+                    <v-icon color="orange">mdi-cart-arrow-down</v-icon>
+                  </v-list-item-avatar>
+                  <v-list-item-content>
+                    <v-list-item-title class="font-weight-bold">Prix Fournisseur</v-list-item-title>
+                    <v-list-item-subtitle class="text-h6 text-orange">
+                      {{ formatPrice(selectedProduct.supplierPrice) }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
                 </v-list-item>
                 
-                <v-list-item v-if="selectedProduct.supplierPrice">
-                  <v-list-item-title>Prix Fournisseur</v-list-item-title>
-                  <v-list-item-subtitle>{{ formatPrice(selectedProduct.supplierPrice) }}</v-list-item-subtitle>
+                <v-list-item v-if="selectedProduct.supplierPrice && selectedProduct.sellingPrice" class="price-info-item success">
+                  <v-list-item-avatar>
+                    <v-icon color="success">mdi-trending-up</v-icon>
+                  </v-list-item-avatar>
+                  <v-list-item-content>
+                    <v-list-item-title class="font-weight-bold">Bénéfice par Unité</v-list-item-title>
+                    <v-list-item-subtitle class="text-h6 text-success font-weight-bold">
+                      {{ formatPrice(selectedProduct.sellingPrice - selectedProduct.supplierPrice) }}
+                    </v-list-item-subtitle>
+                    <v-list-item-subtitle class="text-caption">
+                      Marge: {{ ((selectedProduct.sellingPrice - selectedProduct.supplierPrice) / selectedProduct.supplierPrice * 100).toFixed(1) }}%
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
                 </v-list-item>
+                
+                <v-divider class="my-3"></v-divider>
                 
                 <v-list-item>
                   <v-list-item-title>Méthode de Culture</v-list-item-title>
@@ -266,39 +366,63 @@
                   <v-list-item-title>Origine</v-list-item-title>
                   <v-list-item-subtitle>{{ selectedProduct.origin || 'Non spécifiée' }}</v-list-item-subtitle>
                 </v-list-item>
-              </v-list>
+                  </v-list>
+                </v-card-text>
+              </v-card>
             </v-col>
             
-            <!-- Informations du fournisseur -->
+            <!-- Colonne droite - Prix, Statuts et Fournisseur -->
             <v-col cols="12" md="6">
-              <h3 class="text-h6 mb-4">Informations Fournisseur</h3>
-              
-              <v-list>
-                <v-list-item>
-                  <v-list-item-title>Nom du Fournisseur</v-list-item-title>
-                  <v-list-item-subtitle>{{ getSupplierName(selectedProduct.supplier) }}</v-list-item-subtitle>
-                </v-list-item>
-                
-                <v-list-item>
-                  <v-list-item-title>Email</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedProduct.supplier?.email || 'N/A' }}</v-list-item-subtitle>
-                </v-list-item>
-                
-                <v-list-item>
-                  <v-list-item-title>Localisation</v-list-item-title>
-                  <v-list-item-subtitle>{{ getSupplierLocation(selectedProduct.supplier) }}</v-list-item-subtitle>
-                </v-list-item>
-                
-                <v-list-item v-if="selectedProduct.supplier?.businessDetails">
-                  <v-list-item-title>Entreprise</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedProduct.supplier.businessDetails.businessName || 'N/A' }}</v-list-item-subtitle>
-                </v-list-item>
-              </v-list>
+              <!-- Section des prix -->
+              <v-card outlined class="mb-3">
+                <v-card-title class="text-h6">
+                  <v-icon class="mr-2">mdi-cash-multiple</v-icon>
+                  Prix et Bénéfices
+                </v-card-title>
+                <v-card-text>
+                  <v-list dense>
+                    <v-list-item>
+                      <v-list-item-avatar>
+                        <v-icon color="success">mdi-cash-register</v-icon>
+                      </v-list-item-avatar>
+                      <v-list-item-content>
+                        <v-list-item-title>Prix de Vente</v-list-item-title>
+                        <v-list-item-subtitle class="text-h6 text-success">{{ formatPrice(selectedProduct.sellingPrice) }}</v-list-item-subtitle>
+                      </v-list-item-content>
+                    </v-list-item>
+                    
+                    <v-list-item v-if="selectedProduct.supplierPrice">
+                      <v-list-item-avatar>
+                        <v-icon color="orange">mdi-cart-arrow-down</v-icon>
+                      </v-list-item-avatar>
+                      <v-list-item-content>
+                        <v-list-item-title>Prix Fournisseur</v-list-item-title>
+                        <v-list-item-subtitle class="text-h6 text-orange">{{ formatPrice(selectedProduct.supplierPrice) }}</v-list-item-subtitle>
+                      </v-list-item-content>
+                    </v-list-item>
+                    
+                    <v-list-item v-if="selectedProduct.supplierPrice && selectedProduct.sellingPrice">
+                      <v-list-item-avatar>
+                        <v-icon color="success">mdi-trending-up</v-icon>
+                      </v-list-item-avatar>
+                      <v-list-item-content>
+                        <v-list-item-title>Bénéfice par Unité</v-list-item-title>
+                        <v-list-item-subtitle class="text-h6 text-success">{{ formatPrice(selectedProduct.sellingPrice - selectedProduct.supplierPrice) }}</v-list-item-subtitle>
+                        <v-list-item-subtitle class="text-caption">Marge: {{ ((selectedProduct.sellingPrice - selectedProduct.supplierPrice) / selectedProduct.supplierPrice * 100).toFixed(1) }}%</v-list-item-subtitle>
+                      </v-list-item-content>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
               
               <!-- Statuts -->
-              <h3 class="text-h6 mb-4 mt-6">Statuts</h3>
-              
-              <v-list>
+              <v-card outlined class="mb-3">
+                <v-card-title class="text-h6">
+                  <v-icon class="mr-2">mdi-flag-checkered</v-icon>
+                  Statuts
+                </v-card-title>
+                <v-card-text>
+                  <v-list dense>
                 <v-list-item>
                   <v-list-item-title>Statut Produit</v-list-item-title>
                   <v-list-item-subtitle>
@@ -325,7 +449,48 @@
                     </v-chip>
                   </v-list-item-subtitle>
                 </v-list-item>
-              </v-list>
+                  </v-list>
+                </v-card-text>
+              </v-card>
+              
+              <!-- Fournisseur -->
+              <v-card outlined>
+                <v-card-title class="text-h6">
+                  <v-icon class="mr-2">mdi-account-tie</v-icon>
+                  Fournisseur
+                </v-card-title>
+                <v-card-text>
+                  <v-list dense>
+                  <v-list-item>
+                    <v-list-item-content>
+                      <v-list-item-title class="font-weight-bold">Nom</v-list-item-title>
+                      <v-list-item-subtitle>{{ getSupplierName(selectedProduct.supplier) }}</v-list-item-subtitle>
+                    </v-list-item-content>
+                  </v-list-item>
+                  
+                  <v-list-item>
+                    <v-list-item-content>
+                      <v-list-item-title class="font-weight-bold">Email</v-list-item-title>
+                      <v-list-item-subtitle>{{ selectedProduct.supplier?.email || 'N/A' }}</v-list-item-subtitle>
+                    </v-list-item-content>
+                  </v-list-item>
+                  
+                  <v-list-item>
+                    <v-list-item-content>
+                      <v-list-item-title class="font-weight-bold">Localisation</v-list-item-title>
+                      <v-list-item-subtitle>{{ getSupplierLocation(selectedProduct.supplier) }}</v-list-item-subtitle>
+                    </v-list-item-content>
+                  </v-list-item>
+                  
+                  <v-list-item v-if="selectedProduct.supplier?.businessDetails">
+                    <v-list-item-content>
+                      <v-list-item-title class="font-weight-bold">Entreprise</v-list-item-title>
+                      <v-list-item-subtitle>{{ selectedProduct.supplier.businessDetails.businessName || 'N/A' }}</v-list-item-subtitle>
+                    </v-list-item-content>
+                  </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
             </v-col>
           </v-row>
         </v-card-text>
@@ -342,7 +507,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import api from '@/services/api'
 import ProductImageGallery from '@/components/supplier/ProductImageGallery.vue'
 import { getProductImages } from '@/services/productImages'
@@ -353,12 +518,47 @@ const loading = ref(false)
 const showDetailsModal = ref(false)
 const selectedProduct = ref(null)
 const productImages = ref([])
+const searchQuery = ref('')
+
+// Watcher pour déboguer les changements d'inventaire
+watch(inventory, (newVal) => {
+  console.log('🔍 Watcher: inventory changed to', newVal.length, 'items')
+  if (newVal.length > 0) {
+    console.log('🔍 Watcher: First item:', newVal[0])
+  }
+}, { immediate: true })
+
+// Computed pour filtrer l'inventaire
+const filteredInventory = computed(() => {
+  if (!searchQuery.value) {
+    return inventory.value
+  }
+  
+  const query = searchQuery.value.toLowerCase()
+  return inventory.value.filter(product => {
+    const title = product.title?.toLowerCase() || ''
+    const description = product.description?.toLowerCase() || ''
+    const category = product.category?.name?.toLowerCase() || ''
+    const supplierName = product.supplier?.supplierName?.toLowerCase() || ''
+    const supplierEmail = product.supplier?.email?.toLowerCase() || ''
+    const city = product.supplier?.pickupAddress?.city?.toLowerCase() || ''
+    
+    return title.includes(query) ||
+           description.includes(query) ||
+           category.includes(query) ||
+           supplierName.includes(query) ||
+           supplierEmail.includes(query) ||
+           city.includes(query)
+  })
+})
 
 // Statistiques
 const stats = ref({
   totalReceived: 0,
   totalStock: 0,
-  totalValue: 0
+  totalValue: 0,
+  totalSalesAmount: 0,
+  quantitySold: 0
 })
 
 // En-têtes du tableau avec icônes et tooltips
@@ -384,6 +584,13 @@ const headers = [
     sortable: true,
     icon: 'mdi-account',
     tooltip: 'Nom et localisation du fournisseur'
+  },
+  { 
+    text: 'Qté Livrée', 
+    value: 'deliveredQuantity', 
+    sortable: true,
+    icon: 'mdi-truck-delivery',
+    tooltip: 'Quantité livrée par le fournisseur'
   },
   { 
     text: 'Quantité', 
@@ -440,9 +647,18 @@ const fetchInventory = async () => {
     console.log('📦 Données reçues:', response.data)
     inventory.value = response.data || []
     console.log('📦 Inventaire chargé:', inventory.value.length, 'produits')
+    console.log('📦 Premier produit:', inventory.value[0])
+    console.log('📦 Tous les produits:', JSON.stringify(inventory.value))
+    
+    // Récupérer les statistiques de ventes depuis le backend
+    await fetchSalesStats()
     
     // Calculer les statistiques
     updateStats()
+    
+    // Log après updateStats
+    console.log('📊 Inventaire après updateStats:', inventory.value.length)
+    console.log('📊 Premier produit après updateStats:', inventory.value[0])
   } catch (error) {
     console.error('❌ Erreur lors du chargement de l\'inventaire:', error)
     console.error('❌ Détails de l\'erreur:', error.response?.data)
@@ -451,18 +667,62 @@ const fetchInventory = async () => {
   }
 }
 
+const fetchSalesStats = async () => {
+  try {
+    console.log('💰 Récupération des statistiques de ventes...')
+    const response = await api.get('/api/warehouse/sales-stats')
+    console.log('✅ Statistiques de ventes:', response.data)
+    
+    // Mettre à jour les statistiques avec les données du backend
+    if (response.data) {
+      stats.value.totalSalesAmount = response.data.totalSalesAmount || 0
+      stats.value.quantitySold = response.data.totalQuantitySold || 0
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de la récupération des statistiques de ventes:', error)
+    // Ne pas bloquer l'affichage si erreur
+    stats.value.totalSalesAmount = 0
+    stats.value.quantitySold = 0
+  }
+}
+
 const updateStats = () => {
   stats.value.totalReceived = inventory.value.length  // Nombre de types de produits reçus
   stats.value.totalStock = inventory.value.length     // Nombre de types de produits en stock (par type, pas par quantité)
+  
+  // Calculer la valeur totale du stock actuel
   stats.value.totalValue = inventory.value.reduce((total, product) => {
     const quantity = getDisplayQuantity(product) || 0
     const price = product.sellingPrice || 0  // Utiliser le prix de vente au lieu du prix fournisseur
     return total + (quantity * price)
   }, 0)
+  
+  console.log(`📊 Statistiques calculées:`)
+  console.log(`  💰 Valeur stock actuel: ${stats.value.totalValue}`)
+  console.log(`  💵 Montant des ventes: ${stats.value.totalSalesAmount}`)
+  console.log(`  📦 Quantité vendue: ${stats.value.quantitySold}`)
 }
 
 const refreshInventory = () => {
   fetchInventory()
+}
+
+const initializeWarehouseStock = async () => {
+  try {
+    console.log('🏭 Initialisation du stock d\'entrepôt...')
+    const response = await api.post('/api/products/initialize-warehouse-stock')
+    console.log('✅ Réponse d\'initialisation:', response.data)
+    
+    // Afficher un message de succès
+    alert(`Stock initialisé avec succès!\n${response.data.updatedProducts} produits mis à jour sur ${response.data.totalProducts}`)
+    
+    // Actualiser l'inventaire
+    await fetchInventory()
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'initialisation du stock:', error)
+    alert('Erreur lors de l\'initialisation du stock: ' + (error.response?.data?.message || error.message))
+  }
 }
 
 // Fonctions utilitaires
@@ -489,7 +749,29 @@ const getSupplierLocation = (supplier) => {
 }
 
 const getDisplayQuantity = (product) => {
-  return product.adminRequestedQuantity || product.supplierAvailableQuantity || 0
+  // Toujours utiliser warehouseQuantity comme source de vérité
+  // C'est le seul champ qui reflète le stock réel dans l'entrepôt
+  return product.warehouseQuantity || 0
+}
+
+const getDeliveredQuantity = (product) => {
+  // Si deliveredQuantity est défini, l'utiliser
+  if (product.deliveredQuantity && product.deliveredQuantity > 0) {
+    return product.deliveredQuantity
+  }
+  
+  // Sinon, utiliser stockQuantity comme base (quantité initialement reçue)
+  // stockQuantity = quantité livrée à l'entrepôt
+  if (product.stockQuantity && product.stockQuantity > 0) {
+    return product.stockQuantity
+  }
+  
+  // Fallback: utiliser les anciens champs
+  const adminRequested = product.adminRequestedQuantity || 0
+  const supplierAvailable = product.supplierAvailableQuantity || 0
+  
+  // Prendre la plus grande des deux (quantité réellement livrée)
+  return Math.max(adminRequested, supplierAvailable)
 }
 
 const getQuantityType = (product) => {
@@ -645,6 +927,42 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Styles pour les statistiques de stock dans la modal */
+.stock-info-item {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin: 8px 0;
+  padding: 12px;
+  transition: all 0.3s ease;
+}
+
+.stock-info-item:hover {
+  background-color: #f0f0f0;
+  transform: translateX(5px);
+}
+
+/* Styles pour les informations de prix dans la modal */
+.price-info-item {
+  background-color: #fafafa;
+  border-radius: 8px;
+  margin: 8px 0;
+  padding: 12px;
+  transition: all 0.3s ease;
+}
+
+.price-info-item:hover {
+  background-color: #f0f0f0;
+  transform: translateX(5px);
+}
+
+.price-info-item.success {
+  background-color: #e8f5e9;
+}
+
+.price-info-item.success:hover {
+  background-color: #c8e6c9;
+}
+
 /* Styles pour les en-têtes du tableau */
 .v-data-table :deep(.v-data-table__wrapper) table thead tr th {
   background-color: #f5f5f5;
@@ -697,7 +1015,5 @@ onMounted(() => {
   margin: 2px;
 }
 
-.v-dialog {
-  max-width: 600px;
-}
+/* Suppression du style global pour v-dialog afin de permettre max-width="90vw" */
 </style>

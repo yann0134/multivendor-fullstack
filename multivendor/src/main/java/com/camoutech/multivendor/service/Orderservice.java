@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 public interface OrderService {
     
@@ -49,4 +50,18 @@ public interface OrderService {
     Order findOrderById(Long orderId);
     OrderItem getOrderItemById(Long orderItemId);
     Order cancelOrder(Long orderId, User user);
+    
+    // Méthodes pour l'entrepôt
+    Page<Order> getAllOrdersForWarehouse(String status, String search, Pageable pageable);
+    Map<String, Object> getOrderStatsForWarehouse();
+    Order markOrderAsReady(Long orderId);
+    Order assignDeliveryPerson(Long orderId, Long deliveryPersonId, String deliveryNotes);
+    Order updateDeliveryStatus(Long orderId, String status);
+    
+    // Méthodes de suppression
+    boolean deleteOrder(Long orderId, Long userId);
+    int deleteAllOrdersByUser(Long userId);
+    
+    // Méthode pour supprimer les commandes vides (sans orderItems)
+    int deleteEmptyOrders();
 }

@@ -12,6 +12,7 @@
         <h2 class="text-h5 mb-4">Votre panier est vide</h2>
         <p class="text-grey mb-6">Découvrez nos produits et ajoutez-les à votre panier</p>
         <v-btn color="primary" to="/customer/products" size="large">
+          <v-icon left>mdi-shopping</v-icon>
           Voir les produits
         </v-btn>
       </v-col>

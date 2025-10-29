@@ -37,18 +37,10 @@
                 <v-card-text>
                   <v-form ref="addressForm">
                     <v-row>
-                      <v-col cols="12" md="6">
+                      <v-col cols="12">
                         <v-text-field
-                          v-model="shippingAddress.firstName"
-                          label="Prénom"
-                          :rules="nameRules"
-                          required
-                        />
-                      </v-col>
-                      <v-col cols="12" md="6">
-                        <v-text-field
-                          v-model="shippingAddress.lastName"
-                          label="Nom"
+                          v-model="shippingAddress.name"
+                          label="Nom Complet"
                           :rules="nameRules"
                           required
                         />
@@ -56,7 +48,7 @@
                     </v-row>
                     
                     <v-text-field
-                      v-model="shippingAddress.street"
+                      v-model="shippingAddress.address"
                       label="Adresse"
                       :rules="streetRules"
                       required
@@ -73,7 +65,7 @@
                       </v-col>
                       <v-col cols="12" md="6">
                         <v-text-field
-                          v-model="shippingAddress.zipCode"
+                          v-model="shippingAddress.pinCode"
                           label="Code postal"
                           :rules="zipRules"
                           required
@@ -131,9 +123,9 @@
                 <v-card-text>
                   <div class="mb-4">
                     <h3 class="text-h6 mb-2">Adresse de livraison</h3>
-                    <p>{{ shippingAddress.firstName }} {{ shippingAddress.lastName }}</p>
-                    <p>{{ shippingAddress.street }}</p>
-                    <p>{{ shippingAddress.city }}, {{ shippingAddress.zipCode }}</p>
+                    <p>{{ shippingAddress.name }}</p>
+                    <p>{{ shippingAddress.address }}</p>
+                    <p>{{ shippingAddress.city }}, {{ shippingAddress.pinCode }}</p>
                     <p>{{ shippingAddress.mobile }}</p>
                   </div>
                   
@@ -206,7 +198,7 @@
             <div class="d-flex justify-space-between mb-2">
               <span class="text-body-2">
                 <v-icon size="small" class="mr-1">mdi-cart</v-icon>
-                Sous-total ({{ cartStore.totalItems }} article{{ cartStore.totalItems > 1 ? 's' : '' }})
+                Sous-total ({{ cartStore.totalUnits }} unité{{ cartStore.totalUnits > 1 ? 's' : '' }})
               </span>
               <span class="text-h6 font-weight-bold text-primary">{{ formatPrice(cartStore.totalPrice) }}</span>
             </div>
@@ -250,11 +242,10 @@ const loading = ref(false)
 const paymentMethod = ref('STRIPE')
 
 const shippingAddress = ref({
-  firstName: '',
-  lastName: '',
-  street: '',
+  name: '',
+  address: '',
   city: '',
-  zipCode: '',
+  pinCode: '',
   mobile: ''
 })
 
@@ -294,30 +285,42 @@ const nextStep = () => {
 
 const validateAddressForm = () => {
   // Validation simple - à améliorer avec VeeValidate
-  return shippingAddress.value.firstName &&
-         shippingAddress.value.lastName &&
-         shippingAddress.value.street &&
+  return shippingAddress.value.name &&
+         shippingAddress.value.address &&
          shippingAddress.value.city &&
-         shippingAddress.value.zipCode &&
+         shippingAddress.value.pinCode &&
          shippingAddress.value.mobile
 }
 
 const placeOrder = async () => {
+  console.log('🛒 Début de la création de commande...')
+  console.log('📍 Adresse de livraison:', shippingAddress.value)
+  console.log('💳 Méthode de paiement:', paymentMethod.value)
+  
   loading.value = true
   try {
-    const paymentLinkResponse = await orderStore.createOrder(shippingAddress.value, paymentMethod.value)
+    console.log('📞 Appel de orderStore.createOrder...')
     
-    // Rediriger vers le lien de paiement
-    if (paymentLinkResponse.payment_link_url) {
-      window.location.href = paymentLinkResponse.payment_link_url
-    } else {
-      // Rediriger vers la page de succès
-      router.push('/customer/orders')
-    }
+    // Le nouvel endpoint ne retourne plus de lien de paiement
+    const response = await orderStore.createOrder(shippingAddress.value, paymentMethod.value)
+    
+    console.log('✅ Commande créée avec succès:', response)
+    
+    // Rediriger directement vers la page de succès
+    router.push('/customer/orders')
+    
+    // Afficher un message de succès
+    console.log('🔄 Redirection vers /customer/orders')
+    
   } catch (error) {
-    console.error('Erreur lors de la création de la commande:', error)
+    console.error('❌ Erreur lors de la création de la commande:', error)
+    console.error('❌ Détails de l\'erreur:', error.message)
+    
+    // Afficher une notification d'erreur à l'utilisateur
+    alert('Erreur lors de la création de la commande: ' + error.message)
   } finally {
     loading.value = false
+    console.log('🏁 Fin du processus de création de commande')
   }
 }
 
@@ -359,10 +362,21 @@ const getProductImage = (product) => {
 }
 
 onMounted(async () => {
+  console.log('🔄 Chargement de la page Checkout...')
+  
+  // Vérifier l'état de l'utilisateur
+  console.log('👤 Utilisateur connecté:', authStore.user)
+  console.log('🆔 ID utilisateur:', authStore.user?.id)
+  
   await cartStore.fetchCart()
+  console.log('🛒 Panier chargé:', cartStore.cartItems)
+  console.log('📊 Nombre d\'articles dans le panier:', cartStore.cartItems.length)
   
   if (cartStore.cartItems.length === 0) {
+    console.log('⚠️ Panier vide, redirection vers /customer/cart')
     router.push('/customer/cart')
+  } else {
+    console.log('✅ Panier contient des articles, page Checkout prête')
   }
 })
 </script>

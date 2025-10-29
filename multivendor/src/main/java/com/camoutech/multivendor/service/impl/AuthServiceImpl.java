@@ -28,7 +28,6 @@ import com.camoutech.multivendor.request.LoginRequest;
 import com.camoutech.multivendor.response.AuthResponse;
 import com.camoutech.multivendor.response.SignupRequest;
 import com.camoutech.multivendor.service.AuthService;
-import com.camoutech.multivendor.service.impl.CustomUserServiceImpl;
 import com.camoutech.multivendor.utils.OtpUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;

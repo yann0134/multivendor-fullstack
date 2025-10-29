@@ -7,6 +7,7 @@
 
 package com.camoutech.multivendor.service.impl;
 
+import com.camoutech.multivendor.dto.ProduitDTO;
 import com.camoutech.multivendor.exceptions.ProductException;
 import com.camoutech.multivendor.model.Product;
 import com.camoutech.multivendor.model.ProductCategory;
@@ -156,6 +157,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public List<ProduitDTO> searchProductsDTO(String query) {
+
+        return productRepository.searchProductDTO(query);
+    }
+
+
+
+    @Override
     public Page<Product> getAllProducts(String category, String brand, String colors, String sizes, Integer minPrice, Integer maxPrice, Integer minDiscount, String sort, String stock, Integer pageNumber) {
         Specification<Product> spec = (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -226,5 +235,22 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé pour l'email: " + email));
 
         return productRepository.findByStatusAndSupplier(Product.ProductStatus.APPROVED, supplier, Pageable.unpaged()).getContent();
+    }
+
+    @Override
+    public List<Product> searchProductsByNutritionalInfo(String nutritionalInfo) {
+        return productRepository.findByNutritionalInfoContainingIgnoreCase(nutritionalInfo);
+    }
+
+    @Override
+    public List<Product> getProductsByNutritionalValue(String nutrient, String value) {
+        // Recherche par nutriment spécifique dans les informations nutritionnelles
+        String searchTerm = nutrient.toLowerCase() + ".*" + value.toLowerCase();
+        return productRepository.findByNutritionalInfoContainingIgnoreCase(searchTerm);
+    }
+
+    @Override
+    public List<Product> getOrganicProducts() {
+        return productRepository.findByOrganicTrue();
     }
 }

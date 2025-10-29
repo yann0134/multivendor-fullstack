@@ -14,6 +14,7 @@ import com.camoutech.multivendor.model.Warehouse;
 import com.camoutech.multivendor.model.WarehouseStock;
 import com.camoutech.multivendor.repository.WarehouseRepository;
 import com.camoutech.multivendor.repository.WarehouseStockRepository;
+import com.camoutech.multivendor.repository.ProductRepository;
 import com.camoutech.multivendor.service.WarehouseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class WarehouseServiceImpl implements WarehouseService {
 
     private final WarehouseRepository warehouseRepository;
     private final WarehouseStockRepository warehouseStockRepository;
+    private final ProductRepository productRepository;
 
     @Override
     public Warehouse createWarehouse(Warehouse warehouse) {
@@ -71,13 +73,15 @@ public class WarehouseServiceImpl implements WarehouseService {
     public WarehouseStock addProductToWarehouse(Warehouse warehouse, Product product, int quantity, double costPrice, double sellingPrice) {
         Optional<WarehouseStock> existingStock = warehouseStockRepository.findByWarehouseAndProduct(warehouse, product);
         
+        WarehouseStock savedStock;
+        
         if (existingStock.isPresent()) {
             WarehouseStock stock = existingStock.get();
             stock.setQuantity(stock.getQuantity() + quantity);
             stock.setCostPrice(costPrice);
             stock.setSellingPrice(sellingPrice);
             stock.setLastUpdated(LocalDateTime.now());
-            return warehouseStockRepository.save(stock);
+            savedStock = warehouseStockRepository.save(stock);
         } else {
             WarehouseStock newStock = new WarehouseStock();
             newStock.setWarehouse(warehouse);
@@ -88,8 +92,18 @@ public class WarehouseServiceImpl implements WarehouseService {
             newStock.setCostPrice(costPrice);
             newStock.setSellingPrice(sellingPrice);
             newStock.setLastUpdated(LocalDateTime.now());
-            return warehouseStockRepository.save(newStock);
+            savedStock = warehouseStockRepository.save(newStock);
         }
+        
+        // IMPORTANT: Mettre à jour le champ warehouseQuantity du produit
+        // pour synchroniser avec le stock réel de l'entrepôt
+        int currentWarehouseQuantity = product.getWarehouseQuantity();
+        product.setWarehouseQuantity(currentWarehouseQuantity + quantity);
+        
+        // Sauvegarder le produit avec la nouvelle quantité d'entrepôt
+        productRepository.save(product);
+        
+        return savedStock;
     }
 
     @Override
@@ -119,6 +133,18 @@ public class WarehouseServiceImpl implements WarehouseService {
             stock.setLastUpdated(LocalDateTime.now());
             warehouseStockRepository.save(stock);
         }
+        
+        // IMPORTANT: Synchroniser le champ warehouseQuantity du produit
+        // avec les opérations de stock (surtout pour les sorties)
+        if (operation == StockOperation.OUTGOING) {
+            int currentWarehouseQuantity = product.getWarehouseQuantity();
+            product.setWarehouseQuantity(Math.max(0, currentWarehouseQuantity - quantity));
+            productRepository.save(product);
+        } else if (operation == StockOperation.INCOMING) {
+            int currentWarehouseQuantity = product.getWarehouseQuantity();
+            product.setWarehouseQuantity(currentWarehouseQuantity + quantity);
+            productRepository.save(product);
+        }
     }
 
     @Override
@@ -140,10 +166,20 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Override
     public void reserveStock(Product product, int quantity) {
         updateStock(product, quantity, StockOperation.RESERVE);
+        
+        // Synchroniser le champ reservedQuantity du produit
+        int currentReservedQuantity = product.getReservedQuantity();
+        product.setReservedQuantity(currentReservedQuantity + quantity);
+        productRepository.save(product);
     }
 
     @Override
     public void unreserveStock(Product product, int quantity) {
         updateStock(product, quantity, StockOperation.UNRESERVE);
+        
+        // Synchroniser le champ reservedQuantity du produit
+        int currentReservedQuantity = product.getReservedQuantity();
+        product.setReservedQuantity(Math.max(0, currentReservedQuantity - quantity));
+        productRepository.save(product);
     }
 }

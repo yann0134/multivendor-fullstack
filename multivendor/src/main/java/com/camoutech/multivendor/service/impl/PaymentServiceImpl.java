@@ -33,8 +33,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
 
-    private PaymentOrderRepository paymentOrderRepository;
-    private OrderRepository orderRepository;
+    private final PaymentOrderRepository paymentOrderRepository;
+    private final OrderRepository orderRepository;
 
     private String apiKey="apiKey";
     private String apiSecret="apisecret";

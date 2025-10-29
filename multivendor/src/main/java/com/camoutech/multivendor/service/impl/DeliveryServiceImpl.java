@@ -62,7 +62,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     @Override
     public List<DeliveryPerson> getAvailableDeliveryPersons() {
-        return deliveryPersonRepository.findByStatus(DeliveryStatus.PENDING);
+        return deliveryPersonRepository.findByIsActiveTrue();
     }
 
     @Override
@@ -157,7 +157,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     private DeliveryPerson findNearestAvailableDriver(com.camoutech.multivendor.model.Address address) {
         // Simple implementation - in real scenario, you would calculate distance
-        List<DeliveryPerson> availableDrivers = deliveryPersonRepository.findByStatus(DeliveryStatus.PENDING);
+        List<DeliveryPerson> availableDrivers = deliveryPersonRepository.findByIsActiveTrue();
         return availableDrivers.isEmpty() ? null : availableDrivers.get(0);
     }
 }

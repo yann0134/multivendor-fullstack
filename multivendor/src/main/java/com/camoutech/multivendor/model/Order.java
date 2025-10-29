@@ -14,6 +14,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,9 +31,11 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
+    @Column(name = "order_number")
     private String orderId;
 
     @ManyToOne
+    @JoinColumn(name = "customer_id")
     private User user;
 
     private Long sellerId;
@@ -40,7 +43,7 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.PERSIST)
     private Address shippingAddress;
 
     @Embedded
@@ -61,6 +64,10 @@ public class Order {
     @ManyToOne
     @JoinColumn(name = "delivery_person_id")
     private DeliveryPerson deliveryPerson;
+    
+    // ID de l'utilisateur livreur (pointe vers la table users)
+    @Column(name = "delivery_user_id")
+    private Long deliveryUserId;
 
     private DeliveryStatus deliveryStatus = DeliveryStatus.PENDING;
 
@@ -69,4 +76,12 @@ public class Order {
     private LocalDateTime deliveryDate;
 
     private String deliveryNotes;
+
+    @PrePersist
+    public void generateOrderId() {
+        if (this.orderId == null || this.orderId.isEmpty()) {
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            this.orderId = "ORD-" + timestamp + "-" + String.format("%04d", (int)(Math.random() * 10000));
+        }
+    }
 }

@@ -47,8 +47,21 @@ export const useAuthStore = defineStore('auth', () => {
       const { jwt, role } = response
       
       token.value = jwt
-      user.value = { email: otpEmail.value, role }
-      authService.saveAuthData(jwt, { email: otpEmail.value, role })
+      
+      // Définir le token dans l'instance API avant de récupérer le profil
+      authService.setToken(jwt)
+      
+      // Récupérer les informations complètes de l'utilisateur
+      try {
+        const userProfile = await authService.getUserProfile()
+        user.value = userProfile
+        authService.saveAuthData(jwt, userProfile)
+        console.log('🔍 Login - Profil utilisateur complet récupéré:', userProfile)
+      } catch (profileError) {
+        console.warn('⚠️ Impossible de récupérer le profil complet, utilisation des données de base')
+        user.value = { email: otpEmail.value, role }
+        authService.saveAuthData(jwt, { email: otpEmail.value, role })
+      }
       
       console.log('🔍 Login - Utilisateur stocké:', user.value)
       
@@ -83,8 +96,21 @@ export const useAuthStore = defineStore('auth', () => {
       const { jwt, role } = response
       
       token.value = jwt
-      user.value = { email: userData.email, role }
-      authService.saveAuthData(jwt, { email: userData.email, role })
+      
+      // Définir le token dans l'instance API avant de récupérer le profil
+      authService.setToken(jwt)
+      
+      // Récupérer les informations complètes de l'utilisateur
+      try {
+        const userProfile = await authService.getUserProfile()
+        user.value = userProfile
+        authService.saveAuthData(jwt, userProfile)
+        console.log('🔍 Signup - Profil utilisateur complet récupéré:', userProfile)
+      } catch (profileError) {
+        console.warn('⚠️ Impossible de récupérer le profil complet, utilisation des données de base')
+        user.value = { email: userData.email, role }
+        authService.saveAuthData(jwt, { email: userData.email, role })
+      }
       
       console.log('🔍 Signup - Utilisateur stocké:', user.value)
       
@@ -120,17 +146,30 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Initialiser l'utilisateur depuis le localStorage
-  const initializeUser = () => {
+  const initializeUser = async () => {
     // Recharger le token et l'utilisateur depuis le localStorage au rafraîchissement
     const storedToken = localStorage.getItem('jwt_token')
     if (storedToken) {
       token.value = storedToken
-      const userData = localStorage.getItem('user')
-      if (userData) {
-        try {
-          user.value = JSON.parse(userData)
-        } catch (error) {
-          console.error('Erreur lors du parsing des données utilisateur:', error)
+      
+      // Définir le token dans l'instance API avant de récupérer le profil
+      authService.setToken(storedToken)
+      
+      // Essayer de récupérer le profil complet depuis l'API
+      try {
+        const userProfile = await authService.getUserProfile()
+        user.value = userProfile
+        authService.saveAuthData(storedToken, userProfile)
+        console.log('🔄 Profil utilisateur récupéré au chargement:', userProfile)
+      } catch (error) {
+        console.warn('⚠️ Impossible de récupérer le profil complet, utilisation des données locales')
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          try {
+            user.value = JSON.parse(userData)
+          } catch (parseError) {
+            console.error('Erreur lors du parsing des données utilisateur:', parseError)
+          }
         }
       }
     }

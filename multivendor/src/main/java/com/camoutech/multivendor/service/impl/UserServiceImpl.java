@@ -38,6 +38,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User findUserById(Long userId) {
+        return userRepository.findById(userId).orElse(null);
+    }
+
+    @Override
     public User updateUser(User user) throws Exception {
         try {
             User updatedUser = userRepository.save(user);

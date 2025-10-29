@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequiredArgsConstructor
@@ -35,37 +37,23 @@ public class OrderController {
     private final PaymentOrderRepository paymentOrderRepository;
 
     @PostMapping
-    public ResponseEntity<PaymentLinkResponse> createOrderHandler(
+    public ResponseEntity<Map<String, Object>> createOrderHandler(
             @RequestBody Address sippingAddress,
-            @RequestParam PaymentMethod paymentMethod,
             @RequestHeader("Authorization") String jwt) throws Exception {
 
         User user = userService.findUserByJwtToken(jwt);
         Cart cart = cartService.findUserCart(user);
+        
+        // Utiliser le nouveau workflow warehouse (sans paiement)
         Set<Order> orders = orderService.createOrder(user, sippingAddress, cart);
-
-        PaymentOrder paymentOrder = paymentService.createOrder(user, orders);
-        PaymentLinkResponse res = new PaymentLinkResponse();
-
-        if (paymentMethod.equals(PaymentMethod.RAZORPAY)){
-            PaymentLink payment = paymentService.createRazorpayPaymentLink(user,
-                    paymentOrder.getAmount(),
-                    paymentOrder.getId()
-                    );
-            String paymentUrl = payment.get("short_url");
-            String paymentUrlId = payment.get("id");
-
-            res.setPayment_link_url(paymentUrl);
-            paymentOrder.setPaymentLinkId(paymentUrlId);
-            paymentOrderRepository.save(paymentOrder);
-        }
-        else {
-            String paymentUrl = paymentService.createStripePaymentLink(user,
-                    paymentOrder.getAmount(),
-                    paymentOrder.getId());
-            res.setPayment_link_url(paymentUrl);
-        }
-        return new ResponseEntity<>(res, HttpStatus.OK);
+        
+        // Retourner une réponse simple sans lien de paiement
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Commande créée avec succès");
+        response.put("orders", orders);
+        response.put("status", "PENDING");
+        
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/user")
@@ -85,8 +73,14 @@ public class OrderController {
             String jwt) throws Exception {
 
         User user = userService.findUserByJwtToken(jwt);
-        Order orders = orderService.getOrderById(orderId);
-        return new ResponseEntity<>(orders, HttpStatus.ACCEPTED);
+        Order order = orderService.getOrderById(orderId);
+        
+        // Vérifier que la commande appartient à l'utilisateur connecté
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new Exception("Vous n'êtes pas autorisé à accéder à cette commande");
+        }
+        
+        return new ResponseEntity<>(order, HttpStatus.ACCEPTED);
     }
 
     @GetMapping("/item/{orderItemId}")
@@ -97,6 +91,12 @@ public class OrderController {
 
         User user = userService.findUserByJwtToken(jwt);
         OrderItem orderItem = orderService.getOrderItemById(orderItemId);
+        
+        // Vérifier que la commande de cet article appartient à l'utilisateur connecté
+        if (orderItem.getOrder() != null && !orderItem.getOrder().getUser().getId().equals(user.getId())) {
+            throw new Exception("Vous n'êtes pas autorisé à accéder à cet article de commande");
+        }
+        
         return new ResponseEntity<>(orderItem, HttpStatus.ACCEPTED);
     }
 
@@ -106,7 +106,14 @@ public class OrderController {
             @RequestHeader("Authorization") String jwt
     ) throws Exception {
         User user = userService.findUserByJwtToken(jwt);
-        Order order = orderService.cancelOrder(orderId, user);
+        Order order = orderService.getOrderById(orderId);
+        
+        // Vérifier que la commande appartient à l'utilisateur connecté
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new Exception("Vous n'êtes pas autorisé à annuler cette commande");
+        }
+        
+        Order canceledOrder = orderService.cancelOrder(orderId, user);
 
         Seller seller = sellerService.getSellerById(order.getSellerId());
         SellerReport report = sellerReportService.getSellerReport(seller);
@@ -115,6 +122,62 @@ public class OrderController {
         report.setTotalRefunds(report.getTotalRefunds()+order.getTotalSellingPrice());
         sellerReportService.updateSellerReport(report);
 
-        return ResponseEntity.ok(order);
+        return ResponseEntity.ok(canceledOrder);
+    }
+
+    // Supprimer une commande individuelle
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<Map<String, Object>> deleteOrder(
+            @PathVariable Long orderId,
+            @RequestHeader("Authorization") String jwt
+    ) throws Exception {
+        User user = userService.findUserByJwtToken(jwt);
+        
+        // Vérifier que la commande appartient à l'utilisateur avant de la supprimer
+        Order order = orderService.getOrderById(orderId);
+        if (!order.getUser().getId().equals(user.getId())) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Vous n'êtes pas autorisé à supprimer cette commande");
+            response.put("success", false);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+        
+        // Vérifier que la commande est en statut PENDING (seules les commandes en attente peuvent être supprimées)
+        if (order.getOrderStatus() != com.camoutech.multivendor.domain.OrderStatus.PENDING) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Impossible de supprimer cette commande. Seules les commandes en attente peuvent être supprimées.");
+            response.put("success", false);
+            response.put("status", order.getOrderStatus().toString());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+        
+        boolean deleted = orderService.deleteOrder(orderId, user.getId());
+        
+        Map<String, Object> response = new HashMap<>();
+        if (deleted) {
+            response.put("message", "Commande supprimée avec succès");
+            response.put("success", true);
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("message", "Commande non trouvée");
+            response.put("success", false);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Supprimer toutes les commandes d'un client
+    @DeleteMapping("/user/all")
+    public ResponseEntity<Map<String, Object>> deleteAllUserOrders(
+            @RequestHeader("Authorization") String jwt
+    ) throws Exception {
+        User user = userService.findUserByJwtToken(jwt);
+        int deletedCount = orderService.deleteAllOrdersByUser(user.getId());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", deletedCount + " commande(s) supprimée(s) avec succès");
+        response.put("deletedCount", deletedCount);
+        response.put("success", true);
+        
+        return ResponseEntity.ok(response);
     }
 }

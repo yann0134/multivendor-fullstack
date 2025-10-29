@@ -97,10 +97,26 @@ export const authService = {
     return localStorage.getItem('jwt_token')
   },
 
+  // Définir le token dans l'instance API
+  setToken(token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  },
+
   // Obtenir les informations utilisateur
   getUser() {
     const user = localStorage.getItem('user')
     return user ? JSON.parse(user) : null
+  },
+
+  // Récupérer le profil complet de l'utilisateur depuis l'API
+  async getUserProfile() {
+    try {
+      const response = await api.get('/users/profile')
+      return response.data
+    } catch (error) {
+      console.error('Erreur lors de la récupération du profil utilisateur:', error)
+      throw error
+    }
   },
 
   // Déconnexion

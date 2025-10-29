@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "C:\\Program Files\\nodejs\\npx.cmd",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\ELITEBOOK 850 G6\\Desktop\\ecommerce1\\multivendor-fullstack"
+      ]
+    }
+  }
+}

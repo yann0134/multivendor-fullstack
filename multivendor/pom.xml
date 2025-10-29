@@ -99,6 +99,20 @@
 			<optional>true</optional>
 		</dependency>
 
+		<!--MCP serveur -->
+		<!-- Dépendance pour le starter MCP -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+			<version>1.0.1</version> <!-- Version stable au 25/10/2025 -->
+		</dependency>
+
+
+
+
+
+
+
 		<!-- Tests -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -111,6 +125,19 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
+
+	<!--<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-bom</artifactId>
+				<version>${spring-ai.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>-->
 
 	<build>
 		<plugins>

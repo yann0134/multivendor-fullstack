@@ -74,6 +74,13 @@
         />
         
         <v-list-item 
+          prepend-icon="mdi-plus-circle" 
+          title="Créer Commande" 
+          to="/warehouse/create-order"
+          class="mb-1"
+        />
+        
+        <v-list-item 
           prepend-icon="mdi-package-variant-closed" 
           title="Colis Prêts" 
           to="/warehouse/ready-shipments"

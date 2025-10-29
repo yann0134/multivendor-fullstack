@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -26,8 +25,9 @@ public class WebSecurityConfig {
         http
                 .sessionManagement(management->management.sessionCreationPolicy(
                         SessionCreationPolicy.STATELESS
-                )).authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/categories/**", "/api/products/**", "/api/cart/**", "/api/recipes/**", "/uploads/**", "/auth/**", "/health/**", "/error").permitAll()
+                ))                .authorizeHttpRequests(authz -> authz
+                            .requestMatchers("/api/categories/**", "/api/products/**", "/api/cart/**", "/api/recipes/**", "/api/chat/**", "/api/warehouse/**", "/uploads/**", "/auth/**", "/health/**", "/error").permitAll()
+                        .requestMatchers("/sse/**", "/mcp/**", "/api/mcp/**").permitAll()
                         .anyRequest().authenticated()
                 ).addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
                 .csrf(csrf->csrf.disable())

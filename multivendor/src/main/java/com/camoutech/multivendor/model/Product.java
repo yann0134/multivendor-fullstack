@@ -111,6 +111,8 @@ public class Product {
     @Column(name = "stock_quantity")
     private int stockQuantity = 0; // Quantité en stock
     
+    private int deliveredQuantity = 0; // Quantité livrée à l'entrepôt
+    
     // Gestion des stocks fournisseur/admin
     private int supplierAvailableQuantity = 0; // Quantité disponible chez le fournisseur
     private int adminRequestedQuantity = 0; // Quantité demandée par l'admin
